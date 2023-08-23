@@ -1,0 +1,7 @@
+.DS_Store
+build/
+*.egg-info/
+wheelhouse/
+.idea/
+__pycache__/
+kstar_planner/__version__.py

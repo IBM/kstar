@@ -4,7 +4,6 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kstar-planner"
-version = "0.0.1"
 description = "Kstar Planner is an Automated PDDL based planner that includes planners for top-k and top-quality planning computational tasks."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -14,6 +13,7 @@ authors = [
     {name = "IBM"}
 ]
 dependencies = []
+dynamic = ["version"]
 
 [tool.setuptools]
 py-modules = ["_custom_build"]
@@ -28,6 +28,9 @@ kstar = ["builds/release/bin/**/*", "builds/release/bin/*", "driver/portfolios/*
 
 [tool.setuptools.packages.find]
 include = ["kstar_planner*"]
+
+[tool.setuptools_scm]
+write_to = "kstar_planner/__version__.py"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
