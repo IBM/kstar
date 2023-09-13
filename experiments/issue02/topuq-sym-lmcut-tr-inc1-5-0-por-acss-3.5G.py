@@ -14,7 +14,7 @@ from common_setup import IssueConfig, IssueExperiment
 DIR = os.path.dirname(os.path.abspath(__file__))
 SCRIPT_NAME = os.path.splitext(os.path.basename(__file__))[0]
 BENCHMARKS_DIR = os.environ["DOWNWARD_BENCHMARKS"]
-REVISIONS = ["main"]
+REVISIONS = ["main", "issue02"]
 BUILDS = ["release"]
 
 exp_q = 1.0
