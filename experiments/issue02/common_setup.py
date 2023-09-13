@@ -5,18 +5,16 @@ import os
 import platform
 import subprocess
 import sys
-import logging
 
 from lab.experiment import ARGPARSER
 from lab import tools
 
-from downward.experiment import _DownwardAlgorithm
-from downward.cached_revision import CachedFastDownwardRevision
 from downward.experiment import FastDownwardExperiment
 from downward.reports.absolute import AbsoluteReport
 from downward.reports.compare import ComparativeReport
 from downward.reports.scatter import ScatterPlotReport
 
+import archive
 
 def parse_args():
     ARGPARSER.add_argument(
@@ -89,7 +87,7 @@ DEFAULT_SATISFICING_SUITE = [
     'organic-synthesis-sat18-strips',
     'organic-synthesis-split-sat18-strips', 'parcprinter-08-strips',
     'parcprinter-sat11-strips', 'parking-sat11-strips',
-    'parking-sat14-strips', 'pathways',
+    'parking-sat14-strips', 'pathways', 
     'pegsol-08-strips', 'pegsol-sat11-strips', 'philosophers',
     'pipesworld-notankage', 'pipesworld-tankage', 'psr-large',
     'psr-middle', 'psr-small', 'rovers', 'satellite',
@@ -192,6 +190,7 @@ class IssueExperiment(FastDownwardExperiment):
         "evaluations",
         "expansions",
         "expansions_until_last_jump",
+        "initial_h_value",
         "generated",
         "memory",
         "planner_memory",
@@ -226,7 +225,7 @@ class IssueExperiment(FastDownwardExperiment):
         "run_dir",
         ]
 
-    def __init__(self, revisions=None, configs=None, path=None, time_limit="30m", memory_limit="3584M", **kwargs):
+    def __init__(self, revisions=None, configs=None, path=None, **kwargs):
         """
 
         You can either specify both *revisions* and *configs* or none
@@ -260,8 +259,6 @@ class IssueExperiment(FastDownwardExperiment):
             path = experiments/issue123/data/issue123-exp01/
 
         """
-        self.time_limit = time_limit
-        self.memory_limit = memory_limit
 
         path = path or get_data_dir()
 
@@ -316,8 +313,6 @@ class IssueExperiment(FastDownwardExperiment):
             self.eval_dir,
             get_experiment_name() + "." + report.output_format)
         self.add_report(report, outfile=outfile)
-        self.add_step(
-            'publish-absolute-report', subprocess.call, ['publish', outfile])
 
     def add_comparison_table_step(self, **kwargs):
         """Add a step that makes pairwise revision comparisons.
@@ -352,18 +347,9 @@ class IssueExperiment(FastDownwardExperiment):
                         self.name, rev1, rev2, report.output_format))
                 report(self.eval_dir, outfile)
 
-        def publish_comparison_tables():
-            for rev1, rev2 in itertools.combinations(self._revisions, 2):
-                outfile = os.path.join(
-                    self.eval_dir,
-                    "%s-%s-%s-compare.html" % (self.name, rev1, rev2))
-                subprocess.call(["publish", outfile])
-
         self.add_step("make-comparison-tables", make_comparison_tables)
-        self.add_step(
-            "publish-comparison-tables", publish_comparison_tables)
 
-    def add_scatter_plot_step(self, relative=False, attributes=None):
+    def add_scatter_plot_step(self, relative=False, attributes=None, additional=[]):
         """Add step creating (relative) scatter plots for all revision pairs.
 
         Create a scatter plot for each combination of attribute,
@@ -391,11 +377,19 @@ class IssueExperiment(FastDownwardExperiment):
             print("Make scatter plot for", name)
             algo1 = get_algo_nick(rev1, config_nick)
             algo2 = get_algo_nick(rev2, config_nick if config_nick2 is None else config_nick2)
-            report = ScatterPlotReport(
-                filter_algorithm=[algo1, algo2],
-                attributes=[attribute],
-                relative=relative,
-                get_category=lambda run1, run2: run1["domain"])
+            if attribute == "cost":
+                report = ScatterPlotReport(
+                    filter_algorithm=[algo1, algo2],
+                    attributes=[attribute],
+                    relative=relative,
+                    scale="log",
+                    get_category=lambda run1, run2: run1["domain"])
+            else:
+                report = ScatterPlotReport(
+                    filter_algorithm=[algo1, algo2],
+                    attributes=[attribute],
+                    relative=relative,
+                    get_category=lambda run1, run2: run1["domain"])
             report(
                 self.eval_dir,
                 os.path.join(scatter_dir, rev1 + "-" + rev2, name))
@@ -410,42 +404,6 @@ class IssueExperiment(FastDownwardExperiment):
                 make_scatter_plot(nick1, rev1, rev2, attribute, config_nick2=nick2)
 
         self.add_step(step_name, make_scatter_plots)
-        
-    def add_algorithm(
-        self,
-        name,
-        repo,
-        rev,
-        component_options,
-        build_options=None,
-        driver_options=None,
-    ):
-        """
-        copied from FastDownwardExperiment 
-        modify overall-time-limit and memory limit
-        """
-        if not isinstance(name, str):
-            logging.critical(f"Algorithm name must be a string: {name}")
-        if name in self._algorithms:
-            logging.critical(f"Algorithm names must be unique: {name}")
-        build_options = build_options or []
-        driver_options = [
-            "--validate",
-            "--overall-time-limit",
-            self.time_limit, #"30m",
-            "--overall-memory-limit",
-            self.memory_limit, #"3584M",
-        ] + (driver_options or [])
-        algorithm = _DownwardAlgorithm(
-            name,
-            CachedFastDownwardRevision(repo, rev, build_options),
-            driver_options,
-            component_options,
-        )
-        for algo in self._algorithms.values():
-            if algorithm == algo:
-                logging.critical(
-                    f"Algorithms {algo.name} and {algorithm.name} are identical."
-                )
-        self._algorithms[name] = algorithm
-        
+
+    def add_archive_step(self, archive_path):
+        archive.add_archive_step(self, archive_path)
