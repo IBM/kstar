@@ -594,6 +594,9 @@ namespace kstar
             if ((node->get_real_g() + op.get_cost()) >= this->bound)
                 continue;
 
+            if ((node->get_real_g() + op.get_cost()) > this->target_cost_bound)
+                continue;
+
             /*
             NOTE: In orbit search tmp_registry has to survive as long as
                     succ_state is used. This could be forever, but for heuristics
