@@ -58,8 +58,8 @@ exp = IssueExperiment(
     revisions=REVISIONS,
     configs=CONFIGS,
     environment=ENVIRONMENT,
-    time_limit="30m",       # this soft-kills running executable
-    memory_limit="3584M"
+    # time_limit="30m",       # this soft-kills running executable
+    # memory_limit="3584M"
 )
 exp.set_property("q", exp_q)
 exp.set_property("planner_time_limit", 1800)     # pass this to executable
