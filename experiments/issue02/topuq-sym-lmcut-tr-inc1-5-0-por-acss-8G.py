@@ -116,6 +116,7 @@ IssueExperiment.DEFAULT_TABLE_ATTRIBUTES += KSTAR_ATTRIBUTES
 attributes = IssueExperiment.DEFAULT_TABLE_ATTRIBUTES
 # exp.add_comparison_table_step(attributes=attributes)
 exp.add_absolute_report_step(attributes=attributes)
+exp.add_scatter_plot_step(attributes=["total_time"])
 
 exp.run_steps()
 
