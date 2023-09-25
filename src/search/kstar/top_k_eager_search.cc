@@ -591,8 +591,13 @@ namespace kstar
         for (OperatorID op_id : applicable_ops)
         {
             OperatorProxy op = this->task_proxy.get_operators()[op_id];
+
+            int cost_est_via_node = node->get_real_g() + op.get_cost();
+            if (cost_est_via_node > this->target_cost_bound)
+                continue;
+
             // this bound is infinity by default, we can limit the cost using this bound
-            if ((node->get_real_g() + op.get_cost()) >= this->bound)
+            if (cost_est_via_node >= this->bound)
                 continue;
 
             /*
