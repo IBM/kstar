@@ -42,6 +42,7 @@ static shared_ptr<SearchEngine> _parse(OptionParser &parser) {
     parser.add_option<bool>("extend_plans_with_reordering", "extend plans with reordering", "false");
     parser.add_option<bool>("find_unordered_plans", "find unordered plans by skipping reordered plans", "false");
     parser.add_option<bool>("dump_plan_files", "dump plan files", "true");
+    parser.add_option<bool>("allow_greedy_k_plans_selection", "Allows returning any k out of the top-q plans", "false");
     parser.add_option<string>("json_file_to_dump",
         "A path to the json file to use for dumping",
         OptionParser::NONE);

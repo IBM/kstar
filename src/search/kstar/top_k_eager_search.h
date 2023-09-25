@@ -47,6 +47,7 @@ class TopKEagerSearch : public SearchEngine {
     std::shared_ptr<Group> group;
     int target_k;                    // number of k plans
     double target_q;                 // quality bounds; extract k plans within bound q; stop any of the k or q hits targets
+    bool allow_greedy_k_plans_selection;                // Allow choosing any k out of top-q plans
     int target_cost_bound = EvaluationResult::INFTY;
     int openlist_inc_percent_lb;
     int openlist_inc_percent_ub;

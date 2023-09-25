@@ -45,6 +45,7 @@ namespace kstar
           reopen_closed_nodes(opts.get<bool>("reopen_closed", true)),
           target_k(opts.get<int>("k", -1)),
           target_q(opts.get<double>("q", 0.0)),
+          allow_greedy_k_plans_selection(opts.get<bool>("allow_greedy_k_plans_selection", false)),
           openlist_inc_percent_lb(opts.get<int>("openlist_inc_percent_lb", 1)),
           openlist_inc_percent_ub(opts.get<int>("openlist_inc_percent_ub", 5)),
           switch_on_goal(opts.get<bool>("switch_on_goal", false)),
@@ -901,13 +902,11 @@ namespace kstar
             thr_gt_bound = this->optimal_cost + this->eppstein_thr >= this->min_f_open_list;
         }
         else  {
-            if (this->ignore_quality) {
-                // top-k; compare thr with min_f
-                thr_gt_bound = this->optimal_cost + this->eppstein_thr > this->min_f_open_list;
-            }   
-            else {
+            if (allow_greedy_k_plans_selection && !this->ignore_quality) {
                 // top-k with quality; looser bound than min_f
                 thr_gt_bound = this->optimal_cost + this->eppstein_thr > this->target_cost_bound;
+            } else {
+                thr_gt_bound = this->optimal_cost + this->eppstein_thr > this->min_f_open_list;
             }
         }
 
