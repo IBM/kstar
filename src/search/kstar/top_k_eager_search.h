@@ -12,9 +12,7 @@
 #include "../utils/countdown_timer.h"
 #include "../utils/timer.h"
 
-#include "plan_extender_symmetries.h"
-#include "plan_extender_reordering.h"
-#include "plan_extender_both.h"
+#include "plan_selector.h"
 
 #include <memory>
 #include <vector>
@@ -36,8 +34,6 @@ namespace kstar {
 
 class TopKEagerSearch : public SearchEngine {
     bool decode_plans_upfront = false;  // if true, use extender during search to decode plans
-    bool extend_plans_with_symm;
-    bool extend_plans_with_reordering;
     bool ignore_quality = true;         // if target_q is less than 1, target_k is the only criteria
     bool ignore_k = false;              // if target_k is less than 1, target_q is the only criteria
     const bool find_unordered_plans;
@@ -79,7 +75,7 @@ class TopKEagerSearch : public SearchEngine {
     */
     bool use_oss() const;
     bool use_dks() const;
-    std::shared_ptr<PlanExtender> plan_extender;
+    std::shared_ptr<PlanSelector> plan_selector;
 
     std::vector<Evaluator *> path_dependent_evaluators;
     std::vector<std::shared_ptr<Evaluator>> preferred_operator_evaluators;
@@ -90,6 +86,9 @@ class TopKEagerSearch : public SearchEngine {
     bool dump_plan_files;
     bool dump_json;
     std::string json_filename;
+
+    bool use_regex;
+    std::string action_name_regex_expression;
 
     // EA   
     std::unique_ptr<std::priority_queue<PathGraphNode>> open_list_eppstein;
@@ -121,11 +120,11 @@ class TopKEagerSearch : public SearchEngine {
     void decode_plan_from_path_graph_node(PathGraphNode* pn, Plan& plan, std::vector<StateID>& decoded_states);
     SideTrackEdgeHandle get_ste_from_path_graph_node(PathGraphNode* pn);
     void report_intermediate_plans();
-    int extend_plan(const Plan& reference_plan);
+    int add_plan_if_necessary(const Plan& reference_plan);
     Plan decode_actual_plan(PathGraphNode* pn);
     
     // Setting up the plan extender when we know whether reordering is needed
-    void setup_plan_extender();
+    void setup_plan_selector();
     
 protected:
     virtual void initialize() override;             // initialize search

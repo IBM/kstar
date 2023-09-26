@@ -390,10 +390,7 @@ fast_downward_plugin(
     HELP "K* search"
     SOURCES
         kstar/top_k_eager_search
-        kstar/plan_extender
-        kstar/plan_extender_symmetries
-        kstar/plan_extender_reordering
-        kstar/plan_extender_both
+        kstar/plan_selector
     DEPENDS NULL_PRUNING_METHOD ORDERED_SET SUCCESSOR_GENERATOR STRUCTURAL_SYMMETRIES
     DEPENDENCY_ONLY
 )

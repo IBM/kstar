@@ -38,13 +38,14 @@ static shared_ptr<SearchEngine> _parse(OptionParser &parser) {
     parser.add_option<bool>("restart_eppstein", "extract plans more and restart eppstein", "true");
     parser.add_option<bool>("dump_plans", "dump intermediate plan files", "true");
     parser.add_option<int>("report_period", "report number of plans found so far in sec", "540");
-    parser.add_option<bool>("extend_plans_with_symm", "extend plans with symmetry", "false");
-    parser.add_option<bool>("extend_plans_with_reordering", "extend plans with reordering", "false");
     parser.add_option<bool>("find_unordered_plans", "find unordered plans by skipping reordered plans", "false");
     parser.add_option<bool>("dump_plan_files", "dump plan files", "true");
     parser.add_option<bool>("allow_greedy_k_plans_selection", "Allows returning any k out of the top-q plans", "false");
     parser.add_option<string>("json_file_to_dump",
         "A path to the json file to use for dumping",
+        OptionParser::NONE);
+    parser.add_option<string>("preserve_orders_actions_regex",
+        "A regex expression for specifying actions whose orders are not to be ignored",
         OptionParser::NONE);
         
     parser.add_option<shared_ptr<Group>>(

@@ -37,8 +37,6 @@ namespace kstar
 {
     TopKEagerSearch::TopKEagerSearch(const Options &opts)
         : SearchEngine(opts),
-          extend_plans_with_symm(opts.get<bool>("extend_plans_with_symm", false)),
-          extend_plans_with_reordering(opts.get<bool>("extend_plans_with_reordering", false)),
           find_unordered_plans(opts.get<bool>("find_unordered_plans", false)),
           dump_plans(opts.get<bool>("dump_plans", true)),
           report_period(opts.get<int>("report_period", 540)),
@@ -56,7 +54,8 @@ namespace kstar
           lazy_evaluator(opts.get<shared_ptr<Evaluator>>("lazy_evaluator", nullptr)),
           pruning_method(opts.get<shared_ptr<PruningMethod>>("pruning")),
           dump_plan_files(opts.get<bool>("dump_plan_files", true)),
-          dump_json(opts.contains("json_file_to_dump"))
+          dump_json(opts.contains("json_file_to_dump")),
+          use_regex(opts.contains("preserve_orders_actions_regex"))
     {
 	    if (opts.contains("symmetries")) {
             group = opts.get<shared_ptr<Group>>("symmetries");
@@ -69,13 +68,10 @@ namespace kstar
                 utils::g_log << "Setting group in registry for DKS search" << endl;
                 state_registry.set_group(group);
             }
-            // use plan_extender only if symmetry activated and option was true
-            this->extend_plans_with_symm = this->extend_plans_with_symm && (use_dks() || use_oss());
 	    } else {
     		group = nullptr;
-            extend_plans_with_symm = false;
 	    }
-        this->decode_plans_upfront = this->extend_plans_with_symm || this->extend_plans_with_reordering || this->find_unordered_plans;
+        this->decode_plans_upfront = this->find_unordered_plans || this->use_regex;
 
         if (lazy_evaluator && !lazy_evaluator->does_cache_estimates())
         {
@@ -111,25 +107,17 @@ namespace kstar
             json_filename = opts.get<string>("json_file_to_dump");
             utils::g_log << "Dumping plans to a single json file " << json_filename << endl;
         }
+        if (use_regex) {
+            action_name_regex_expression = opts.get<string>("preserve_orders_actions_regex");
+            utils::g_log << "Using regex " << action_name_regex_expression << " to specify action names to preserve orders of"  << endl;
+        }
     }
 
-    void TopKEagerSearch::setup_plan_extender() {
-        if (extend_plans_with_symm) {
-            if (extend_plans_with_reordering) {
-                plan_extender = make_shared<PlanExtenderBoth>(task_proxy, find_unordered_plans);
-                utils::g_log << "Extending plans with both symmetry and reordering" << endl;
-            } else {
-                plan_extender = make_shared<PlanExtenderSymmetries>(task_proxy, find_unordered_plans);
-                utils::g_log << "Extending plans with symmetry" << endl;
-            }
-        } else {
-            if (extend_plans_with_reordering) {
-                plan_extender = make_shared<PlanExtenderReordering>(task_proxy, find_unordered_plans);
-                utils::g_log << "Extending plans with reordering" << endl;
-            } else {
-                plan_extender = make_shared<PlanExtender>(task_proxy, find_unordered_plans);
-            }
-        }
+    void TopKEagerSearch::setup_plan_selector() {
+        plan_selector = make_shared<PlanSelector>(task_proxy, find_unordered_plans);
+        if (this->use_regex)
+            plan_selector->set_regex(action_name_regex_expression);
+
     }
 
     bool TopKEagerSearch::use_oss() const {
@@ -297,17 +285,15 @@ namespace kstar
                     if (!pruning_method->was_pruned()) {
                         // No pruning happened so far, disabling
                         pruning_method->disable_pruning();
-                        // We don't need to extend plans with reordering
-                        extend_plans_with_reordering = false;
                     } else {
                         utils::g_log << "Pruning disabled " << pruning_method->was_pruning_disabled() << std::endl;
                         utils::g_log << "Successors were pruned " << pruning_method->was_pruned() << std::endl;
                     }
-                    setup_plan_extender();
+                    setup_plan_selector();
 
                     if (this->decode_plans_upfront) {
                         utils::g_log << "A* number of plans before extending is " <<this->astar_number_of_plans << std::endl;
-                        this->astar_number_of_plans = this->extend_plan(get_plan());
+                        this->astar_number_of_plans = this->add_plan_if_necessary(get_plan());
                         utils::g_log << "A* number of plans after extending is " <<this->astar_number_of_plans << std::endl;
                         for (auto it = this->decoded_plans->begin(); it != this->decoded_plans->end(); ++it)
                             this->astar_decoded_plans->push_back(*it);
@@ -840,14 +826,14 @@ namespace kstar
         
         this->number_of_plans = this->astar_number_of_plans;                
         this->decoded_plans = utils::make_unique_ptr<std::vector<Plan>>();
-        this->plan_extender->clear();       // clear unordered_set inside plan extender
+        this->plan_selector->clear();       // clear unordered_set inside plan extender
         
         if (this->decode_plans_upfront)
         {
-            // plan_extender does not remove dummy action!
+            // plan_selector does not remove dummy action!
             for (auto it = this->astar_decoded_plans->begin(); it != this->astar_decoded_plans->end(); ++it)
             {
-                this->extend_plan(*it);
+                this->add_plan_if_necessary(*it);
             }
         }
 
@@ -927,7 +913,7 @@ namespace kstar
             if (this->decode_plans_upfront) {
                 // decode path graph node here to know the number of symmetric plans
                 Plan decoded_plan = this->decode_actual_plan(temp_ptr);
-                this->number_of_plans += this->extend_plan(decoded_plan);
+                this->number_of_plans += this->add_plan_if_necessary(decoded_plan);
             }
             else {
                 this->solution_path_nodes->push_back(*temp_ptr);
@@ -1112,21 +1098,12 @@ namespace kstar
         }
     }
 
-    int TopKEagerSearch::extend_plan(const Plan& reference_plan)
+    int TopKEagerSearch::add_plan_if_necessary(const Plan& reference_plan)
     {
         // The reference plan is added if new
-        int num_target_plans = this->target_k;
-        if (!this->ignore_k) {
-            num_target_plans -= (int) this->decoded_plans->size();
-        }
-
         int count_plans = 0;
-        vector<Plan> plans;
-        plan_extender->extend_plan(reference_plan, plans, num_target_plans);
-        for (Plan p : plans)
-        {
-            // p.pop_back();    // commented out removing the dummy operator when saving to file; dot it when dumping files
-            this->decoded_plans->push_back(p);
+        if (plan_selector->add_plan_if_necessary(reference_plan)) {
+            this->decoded_plans->push_back(reference_plan);
             ++count_plans;
         }
         return count_plans;
@@ -1156,7 +1133,7 @@ namespace kstar
             int count_plans = 0;
             if (!this->decoded_plans->empty()) {
                 this->decoded_plans = utils::make_unique_ptr<std::vector<Plan>>();    
-                this->plan_extender->clear();
+                this->plan_selector->clear();
             }
 
             // process astar plan; this->decoded_plans stores astar plan
