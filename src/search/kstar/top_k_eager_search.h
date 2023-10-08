@@ -33,11 +33,8 @@ namespace kstar {
 
 
 class TopKEagerSearch : public SearchEngine {
-    bool decode_plans_upfront = false;  // if true, use extender during search to decode plans
     bool ignore_quality = true;         // if target_q is less than 1, target_k is the only criteria
     bool ignore_k = false;              // if target_k is less than 1, target_q is the only criteria
-    const bool find_unordered_plans;
-    const bool dump_plans;
     int report_period;
     const bool reopen_closed_nodes;
     std::shared_ptr<Group> group;
@@ -82,19 +79,10 @@ class TopKEagerSearch : public SearchEngine {
     std::shared_ptr<Evaluator> lazy_evaluator;
     std::shared_ptr<PruningMethod> pruning_method;
 
-    // Dumping plans
-    bool dump_plan_files;
-    bool dump_json;
-    std::string json_filename;
-
-    bool use_regex;
-    std::string action_name_regex_expression;
 
     // EA   
     std::unique_ptr<std::priority_queue<PathGraphNode>> open_list_eppstein;
     std::unique_ptr<std::vector<PathGraphNode>> solution_path_nodes;
-    std::unique_ptr<std::vector<Plan>> decoded_plans;
-    std::unique_ptr<std::vector<Plan>> astar_decoded_plans;
     PerStateInformation<HinList> HinLists;
     PerStateInformation<HtreeList> HtreeLists;
     
@@ -120,12 +108,8 @@ class TopKEagerSearch : public SearchEngine {
     void decode_plan_from_path_graph_node(PathGraphNode* pn, Plan& plan, std::vector<StateID>& decoded_states);
     SideTrackEdgeHandle get_ste_from_path_graph_node(PathGraphNode* pn);
     void report_intermediate_plans();
-    int add_plan_if_necessary(const Plan& reference_plan);
     Plan decode_actual_plan(PathGraphNode* pn);
-    
-    // Setting up the plan extender when we know whether reordering is needed
-    void setup_plan_selector();
-    
+       
 protected:
     virtual void initialize() override;             // initialize search
     virtual SearchStatus step() override;           // 1 step alternation

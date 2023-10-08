@@ -37,8 +37,6 @@ namespace kstar
 {
     TopKEagerSearch::TopKEagerSearch(const Options &opts)
         : SearchEngine(opts),
-          find_unordered_plans(opts.get<bool>("find_unordered_plans", false)),
-          dump_plans(opts.get<bool>("dump_plans", true)),
           report_period(opts.get<int>("report_period", 540)),
           reopen_closed_nodes(opts.get<bool>("reopen_closed", true)),
           target_k(opts.get<int>("k", -1)),
@@ -52,10 +50,7 @@ namespace kstar
           f_evaluator(opts.get<shared_ptr<Evaluator>>("f_eval", nullptr)),
           preferred_operator_evaluators(opts.get_list<shared_ptr<Evaluator>>("preferred")),
           lazy_evaluator(opts.get<shared_ptr<Evaluator>>("lazy_evaluator", nullptr)),
-          pruning_method(opts.get<shared_ptr<PruningMethod>>("pruning")),
-          dump_plan_files(opts.get<bool>("dump_plan_files", true)),
-          dump_json(opts.contains("json_file_to_dump")),
-          use_regex(opts.contains("preserve_orders_actions_regex"))
+          pruning_method(opts.get<shared_ptr<PruningMethod>>("pruning"))
     {
 	    if (opts.contains("symmetries")) {
             group = opts.get<shared_ptr<Group>>("symmetries");
@@ -71,7 +66,7 @@ namespace kstar
 	    } else {
     		group = nullptr;
 	    }
-        this->decode_plans_upfront = this->find_unordered_plans || this->use_regex;
+        plan_selector = make_shared<PlanSelector>(opts, task_proxy);
 
         if (lazy_evaluator && !lazy_evaluator->does_cache_estimates())
         {
@@ -81,8 +76,6 @@ namespace kstar
         timer = utils::make_unique_ptr<utils::CountdownTimer>(max_time);
         open_list_eppstein = utils::make_unique_ptr<std::priority_queue<PathGraphNode>>();
         solution_path_nodes = utils::make_unique_ptr<std::vector<PathGraphNode>>();
-        decoded_plans = utils::make_unique_ptr<std::vector<Plan>>();
-        astar_decoded_plans = utils::make_unique_ptr<std::vector<Plan>>();
         goal_root = nullptr;
         this->plan_manager.set_plan_dirname("found_plans");
 
@@ -102,22 +95,6 @@ namespace kstar
             utils::g_log << "target_q=" << this->target_q << std::endl;
             utils::g_log << "target_cost_bound=" << this->target_cost_bound << std::endl;
         }
-        utils::g_log << "Dumping plans to disk: " << (dump_plans ? "1" : "0") << endl;
-        if (dump_json) {
-            json_filename = opts.get<string>("json_file_to_dump");
-            utils::g_log << "Dumping plans to a single json file " << json_filename << endl;
-        }
-        if (use_regex) {
-            action_name_regex_expression = opts.get<string>("preserve_orders_actions_regex");
-            utils::g_log << "Using regex " << action_name_regex_expression << " to specify action names to preserve orders of"  << endl;
-        }
-    }
-
-    void TopKEagerSearch::setup_plan_selector() {
-        plan_selector = make_shared<PlanSelector>(task_proxy, find_unordered_plans);
-        if (this->use_regex)
-            plan_selector->set_regex(action_name_regex_expression);
-
     }
 
     bool TopKEagerSearch::use_oss() const {
@@ -289,16 +266,12 @@ namespace kstar
                         utils::g_log << "Pruning disabled " << pruning_method->was_pruning_disabled() << std::endl;
                         utils::g_log << "Successors were pruned " << pruning_method->was_pruned() << std::endl;
                     }
-                    setup_plan_selector();
 
-                    if (this->decode_plans_upfront) {
+                    if (plan_selector->decode_plans_upfront()) {
                         utils::g_log << "A* number of plans before extending is " <<this->astar_number_of_plans << std::endl;
-                        this->astar_number_of_plans = this->add_plan_if_necessary(get_plan());
+                        this->astar_number_of_plans = plan_selector->add_plan_if_necessary(get_plan());
                         utils::g_log << "A* number of plans after extending is " <<this->astar_number_of_plans << std::endl;
-                        for (auto it = this->decoded_plans->begin(); it != this->decoded_plans->end(); ++it)
-                            this->astar_decoded_plans->push_back(*it);
-                        assert(this->astar_decoded_plans->size() == this->decoded_plans->size());
-                        assert((int) this->astar_decoded_plans->size() == this->astar_number_of_plans);
+                        assert((int) plan_selector->num_decoded_plans() == this->astar_number_of_plans);
                     }
                     else {
                         this->astar_number_of_plans = 1;
@@ -825,16 +798,12 @@ namespace kstar
             this->goal_root.reset();
         
         this->number_of_plans = this->astar_number_of_plans;                
-        this->decoded_plans = utils::make_unique_ptr<std::vector<Plan>>();
         this->plan_selector->clear();       // clear unordered_set inside plan extender
         
-        if (this->decode_plans_upfront)
+        if (plan_selector->decode_plans_upfront())
         {
             // plan_selector does not remove dummy action!
-            for (auto it = this->astar_decoded_plans->begin(); it != this->astar_decoded_plans->end(); ++it)
-            {
-                this->add_plan_if_necessary(*it);
-            }
+            plan_selector->add_plan_if_necessary(get_plan());
         }
 
         const State& goal_state = this->state_registry.lookup_state(this->goal_state_id);
@@ -910,10 +879,10 @@ namespace kstar
         // push to solution_path_nodes only if the path graph node is within the cost bound
         if (temp_ptr->path_value + this->optimal_cost <= this->target_cost_bound) 
         {
-            if (this->decode_plans_upfront) {
+            if (plan_selector->decode_plans_upfront()) {
                 // decode path graph node here to know the number of symmetric plans
                 Plan decoded_plan = this->decode_actual_plan(temp_ptr);
-                this->number_of_plans += this->add_plan_if_necessary(decoded_plan);
+                this->number_of_plans += plan_selector->add_plan_if_necessary(decoded_plan);
             }
             else {
                 this->solution_path_nodes->push_back(*temp_ptr);
@@ -1098,17 +1067,6 @@ namespace kstar
         }
     }
 
-    int TopKEagerSearch::add_plan_if_necessary(const Plan& reference_plan)
-    {
-        // The reference plan is added if new
-        int count_plans = 0;
-        if (plan_selector->add_plan_if_necessary(reference_plan)) {
-            this->decoded_plans->push_back(reference_plan);
-            ++count_plans;
-        }
-        return count_plans;
-    }
-
     Plan TopKEagerSearch::decode_actual_plan(PathGraphNode* pn)
     {
         Plan actual_plan;
@@ -1125,15 +1083,14 @@ namespace kstar
 
     void TopKEagerSearch::save_plan_if_necessary()
     {
-        if ((!this->dump_plans) || this->number_of_plans == 0)
+        if ((!plan_selector->is_dump_plans()) || this->number_of_plans == 0)
             return; 
 
-        if (!this->decode_plans_upfront && this->number_of_plans != (int) this->decoded_plans->size())
+        if (!plan_selector->decode_plans_upfront() && this->number_of_plans != (int) plan_selector->num_decoded_plans())
         {
             int count_plans = 0;
-            if (!this->decoded_plans->empty()) {
-                this->decoded_plans = utils::make_unique_ptr<std::vector<Plan>>();    
-                this->plan_selector->clear();
+            if (plan_selector->num_decoded_plans() > 0) {
+                plan_selector->clear();
             }
 
             // process astar plan; this->decoded_plans stores astar plan
@@ -1141,7 +1098,7 @@ namespace kstar
             {
                 // TODO: When we move things into the plan extender, we can change its behavior to not check for duplicates
                 //       and store plans in the case when no decoding upfront was performed.
-                this->decoded_plans->push_back(get_plan());
+                plan_selector->add_plan_no_duplicate_check(get_plan());
                 count_plans = this->astar_number_of_plans;
             }
             
@@ -1155,47 +1112,24 @@ namespace kstar
                     Plan decoded_plan;
                     decoded_plan = this->decode_actual_plan(&pn);       // all cases are divided inside this method
                     // TODO: here as well, as in todo above, when we move things to the plan extender, ensure correct behavior. 
-                    this->decoded_plans->push_back(decoded_plan);
+                    plan_selector->add_plan_no_duplicate_check(decoded_plan);
                     count_plans++;
                 }
                 if (it == this->solution_path_nodes->end())
                     break;
             }
             if (!this->ignore_k) {
-                assert ((int) this->decoded_plans->size() <= this->target_k);
+                assert ((int) plan_selector->num_decoded_plans() <= this->target_k);
             }
-            assert ((int) this->decoded_plans->size() == this->number_of_plans);
-            assert ((int) this->decoded_plans->size() == count_plans);
+            assert ((int) plan_selector->num_decoded_plans() == this->number_of_plans);
+            assert ((int) plan_selector->num_decoded_plans() == count_plans);
         }
 
         this->plan_manager.delete_plans("found_plans/done");
         this->plan_manager.move_plans("found_plans", "found_plans/done");
         this->plan_manager.set_num_previously_generated_plans(0);
 
-        ofstream os(json_filename.c_str());
-        bool first_dumped = false;
-        if (dump_json) {
-            // Writing plans to JSON
-            os << "{ \"plans\" : [" << endl;
-        }
-        for (auto it = this->decoded_plans->begin(); it != this->decoded_plans->end(); ++it)
-        {
-            Plan p {*it};
-            p.pop_back();
-            if (dump_plan_files)
-                this->plan_manager.save_plan(p, this->task_proxy, true);
-
-            if (dump_json) {
-                if (first_dumped) {
-                    os << "," << endl;
-                }
-                first_dumped = true;
-                plan_manager.write_plan_json(p, os, task_proxy);
-            }
-        }
-        if (dump_json) {
-            os << "]}" << endl;
-        }
+        plan_selector->save_plans(plan_manager);
     }
 
     void TopKEagerSearch::reward_progress()

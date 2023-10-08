@@ -9,6 +9,11 @@
 #include <string>
 #include <regex>
 
+namespace options {
+class OptionParser;
+class Options;
+}
+
 namespace kstar {
 
 /*
@@ -76,23 +81,46 @@ class PlanSelector {
     utils::HashSet<PlanCanonical> plans_sets;
     std::vector<bool> to_preserve;
 
+
+
 protected:
     TaskProxy task_proxy;
-    void get_plan_for_op_ids(const std::vector<int>& plan_ids, Plan& plan) const;
+private:
     bool keep_plans_unordered;
+    const bool dump_plans;
+    bool dump_plan_files;
+    bool dump_json;
+    std::string json_filename;
+
+    bool use_regex;
+    std::unique_ptr<std::vector<Plan>> decoded_plans;
+
 public:
-    PlanSelector(const TaskProxy &task_proxy, bool keep_plans_unordered);
+    PlanSelector(const options::Options &opts, const TaskProxy &task_proxy);
 
     virtual ~PlanSelector() = default;
 
-    bool add_plan_if_necessary(const Plan& plan);
+
+    int add_plan_if_necessary(const Plan& plan);
     
     void set_regex(std::string re);
 
     void clear() {
         plans_sets.clear();
+        decoded_plans = utils::make_unique_ptr<std::vector<Plan>>();
     }
 
+    size_t num_decoded_plans() const { return decoded_plans->size(); }
+
+
+    void add_plan_no_duplicate_check(const Plan& plan) {
+        decoded_plans->push_back(plan);
+    }
+
+    void save_plans(PlanManager& plan_manager) const;
+
+    bool decode_plans_upfront() const { return keep_plans_unordered || use_regex; }
+    bool is_dump_plans() const { return dump_plans; }
 };
 
 }
