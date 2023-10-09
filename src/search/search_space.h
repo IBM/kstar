@@ -81,6 +81,8 @@ public:
 
     const SearchNodeInfo& look_up_search_node_info(const StateID sid);
 
+    void write_edges(std::ofstream &file, const TaskProxy &task_proxy) const;
+    void write_nodes(std::ofstream &file) const;
     void dump(const TaskProxy &task_proxy) const;
     void print_statistics() const;
 };

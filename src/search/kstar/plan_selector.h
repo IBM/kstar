@@ -80,7 +80,7 @@ public:
 class PlanSelector {
     utils::HashSet<PlanCanonical> plans_sets;
     std::vector<bool> to_preserve;
-
+    int num_preserved;
 
 
 protected:
@@ -100,6 +100,7 @@ public:
 
     virtual ~PlanSelector() = default;
 
+    bool is_ordering_preserved(OperatorID id) const;
 
     int add_plan_if_necessary(const Plan& plan);
     
@@ -121,6 +122,8 @@ public:
 
     bool decode_plans_upfront() const { return keep_plans_unordered || use_regex; }
     bool is_dump_plans() const { return dump_plans; }
+    bool is_use_regex() const { return use_regex; }
+    int get_num_preserved() const { return num_preserved; }
 };
 
 }

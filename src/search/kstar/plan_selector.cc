@@ -10,6 +10,7 @@ namespace kstar {
 
 
 PlanSelector::PlanSelector(const Options &opts, const TaskProxy &task_proxy) : 
+            num_preserved(0),
             task_proxy(task_proxy), 
             keep_plans_unordered(opts.get<bool>("find_unordered_plans", false)),
             dump_plans(opts.get<bool>("dump_plans", true)),
@@ -42,13 +43,24 @@ int PlanSelector::add_plan_if_necessary(const Plan& plan) {
 void PlanSelector::set_regex(std::string re) {
     OperatorsProxy operators = task_proxy.get_operators();
     to_preserve.assign(operators.size(), false);
-
+    num_preserved = 0;
     for (OperatorProxy op : operators) {      
         if (std::regex_match (op.get_name(), std::regex(re) )) {
             to_preserve[op.get_id()] = true;
+            num_preserved++;
         }
     }
 }
+
+bool PlanSelector::is_ordering_preserved(OperatorID id) const {
+    if (keep_plans_unordered)
+        return false;
+    if (!use_regex) 
+        return true;
+
+    return to_preserve[id.get_index()];
+}
+
 
 void PlanSelector::save_plans(PlanManager& plan_manager) const {
     std::ofstream os(json_filename.c_str());

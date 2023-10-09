@@ -51,7 +51,6 @@ class TopKEagerSearch : public SearchEngine {
     int num_eppstein_calls = 0;
     int number_of_plans = 0;
     int previous_number_of_plans = 0;   // track the changes in the number of plans per outer iteration
-    int astar_number_of_plans = 1;      // with OSS this can be greater than 1
     int eppstein_thr = -1;
     int previous_report_sec = 0;
     int step_astar_iter_after_reopen = 0;
@@ -78,7 +77,10 @@ class TopKEagerSearch : public SearchEngine {
     std::vector<std::shared_ptr<Evaluator>> preferred_operator_evaluators;
     std::shared_ptr<Evaluator> lazy_evaluator;
     std::shared_ptr<PruningMethod> pruning_method;
-
+    bool allow_greedy_por;     // Used when a pruning method is used with partially ordered top-quality.
+    bool write_dot;
+    bool null_pruning_method;
+    std::vector<SideTrackEdge> ste_for_dump;
 
     // EA   
     std::unique_ptr<std::priority_queue<PathGraphNode>> open_list_eppstein;
@@ -109,7 +111,9 @@ class TopKEagerSearch : public SearchEngine {
     SideTrackEdgeHandle get_ste_from_path_graph_node(PathGraphNode* pn);
     void report_intermediate_plans();
     Plan decode_actual_plan(PathGraphNode* pn);
-       
+
+    void write_dot_file() const;
+
 protected:
     virtual void initialize() override;             // initialize search
     virtual SearchStatus step() override;           // 1 step alternation

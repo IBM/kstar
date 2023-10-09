@@ -10,6 +10,7 @@
 #include "task_utils/task_properties.h"
 #include "utils/logging.h"
 
+#include <fstream>
 #include <cassert>
 
 using namespace std;
@@ -437,6 +438,29 @@ const SearchNodeInfo& SearchSpace::look_up_search_node_info(const StateID sid) {
     return info;
 }
 
+void SearchSpace::write_edges(std::ofstream &file, const TaskProxy &task_proxy) const {
+    OperatorsProxy operators = task_proxy.get_operators();
+    for (StateID id : state_registry) {
+        /* The body duplicates SearchNode::dump() but we cannot create
+           a search node without discarding the const qualifier. */
+        State state = state_registry.lookup_state(id);
+        const SearchNodeInfo &node_info = search_node_infos[state];
+
+
+        if (node_info.creating_operator != OperatorID::no_operator &&
+            node_info.parent_state_id != StateID::no_state) {
+            OperatorProxy op = operators[node_info.creating_operator.get_index()];
+            file << "    s" << node_info.parent_state_id << " -> s" << id << " [label=\""
+                << op.get_name() << "\"];" << endl;
+        }
+    }
+}
+
+void SearchSpace::write_nodes(std::ofstream &file) const {
+    for (StateID id : state_registry) {
+        file << "    s" << id << " [shape=circle];" << endl;        
+    }
+}
 
 void SearchSpace::dump(const TaskProxy &task_proxy) const {
     OperatorsProxy operators = task_proxy.get_operators();

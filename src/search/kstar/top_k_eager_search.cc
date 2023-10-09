@@ -6,6 +6,7 @@
 #include "../open_list_factory.h"
 #include "../option_parser.h"
 #include "../pruning_method.h"
+#include "../pruning/null_pruning_method.h"
 
 #include "../algorithms/ordered_set.h"
 #include "../task_utils/successor_generator.h"
@@ -50,7 +51,9 @@ namespace kstar
           f_evaluator(opts.get<shared_ptr<Evaluator>>("f_eval", nullptr)),
           preferred_operator_evaluators(opts.get_list<shared_ptr<Evaluator>>("preferred")),
           lazy_evaluator(opts.get<shared_ptr<Evaluator>>("lazy_evaluator", nullptr)),
-          pruning_method(opts.get<shared_ptr<PruningMethod>>("pruning"))
+          pruning_method(opts.get<shared_ptr<PruningMethod>>("pruning")),
+          allow_greedy_por(opts.get<bool>("allow_greedy_por", false)),
+          write_dot(opts.get<bool>("write_dot", false))
     {
 	    if (opts.contains("symmetries")) {
             group = opts.get<shared_ptr<Group>>("symmetries");
@@ -67,6 +70,10 @@ namespace kstar
     		group = nullptr;
 	    }
         plan_selector = make_shared<PlanSelector>(opts, task_proxy);
+        if (!plan_selector->is_use_regex() && allow_greedy_por) {
+            cerr << "allow_greedy_por can be used only when using regex to preserve orderings" << endl;
+            utils::exit_with(utils::ExitCode::SEARCH_INPUT_ERROR);            
+        }
 
         if (lazy_evaluator && !lazy_evaluator->does_cache_estimates())
         {
@@ -95,6 +102,7 @@ namespace kstar
             utils::g_log << "target_q=" << this->target_q << std::endl;
             utils::g_log << "target_cost_bound=" << this->target_cost_bound << std::endl;
         }
+        null_pruning_method = (dynamic_cast<null_pruning_method::NullPruningMethod*>(pruning_method.get()) != nullptr);
     }
 
     bool TopKEagerSearch::use_oss() const {
@@ -220,6 +228,8 @@ namespace kstar
         utils::g_log << "Actual search time: " << timer->get_elapsed_time() << std::endl;
         utils::g_log << "Found plans: " << this->number_of_plans << std::endl;
         // dump_search_space();
+        if (write_dot)
+            write_dot_file();
     }
 
     SearchStatus TopKEagerSearch::step()
@@ -268,19 +278,14 @@ namespace kstar
                     }
 
                     if (plan_selector->decode_plans_upfront()) {
-                        utils::g_log << "A* number of plans before extending is " <<this->astar_number_of_plans << std::endl;
-                        this->astar_number_of_plans = plan_selector->add_plan_if_necessary(get_plan());
-                        utils::g_log << "A* number of plans after extending is " <<this->astar_number_of_plans << std::endl;
-                        assert((int) plan_selector->num_decoded_plans() == this->astar_number_of_plans);
-                    }
-                    else {
-                        this->astar_number_of_plans = 1;
+                        plan_selector->add_plan_if_necessary(get_plan());
+                        assert(plan_selector->num_decoded_plans() == 1);
                     }
 
                     if (!this->ignore_quality) {
                         this->target_cost_bound = (int) std::floor(this->target_q * (double) this->optimal_cost);
                     }
-                    this->number_of_plans = this->astar_number_of_plans;
+                    this->number_of_plans = 1;
 
                     if (!this->ignore_k && this->number_of_plans >= this->target_k) {
                         utils::g_log << "step[1]::normal_termination=" << 1 << std::endl;
@@ -531,11 +536,68 @@ namespace kstar
         vector<OperatorID> applicable_ops;
         this->successor_generator.generate_applicable_ops(s, applicable_ops);
 
+        vector<OperatorID> preserve_applicable_ops;
+        if (!allow_greedy_por && plan_selector->is_use_regex() && !null_pruning_method && !pruning_method->was_pruning_disabled()) {
+            // Copying the applicable ops
+            preserve_applicable_ops = applicable_ops;
+            // std::cout << "Preserving " << preserve_applicable_ops.size() << " applicable operators" << std::endl;
+            // for (OperatorID op_id : preserve_applicable_ops) {
+            //     cout << task_proxy.get_operators()[op_id].get_name() << endl;
+            // }
+        }
+
         /*
           TODO: When preferred operators are in use, a preferred operator will be
           considered by the preferred operator queues even when it is pruned.
         */
         pruning_method->prune_operators(s, applicable_ops);
+        if (!allow_greedy_por && plan_selector->is_use_regex() && !null_pruning_method && !pruning_method->was_pruning_disabled()) {
+            // Check if any of the operators that were not pruned are orderings preserved for.
+            // std::cout << "After pruning " << applicable_ops.size() << " applicable operators" << std::endl;
+            // for (OperatorID op_id : applicable_ops) {
+            //     cout << task_proxy.get_operators()[op_id].get_name() << endl;
+            // }
+            vector<bool> remaining_applicable_ops_set(task_proxy.get_operators().size(), false);
+            // int num_remaining = 0;
+            bool need_extending = false;
+            for (OperatorID op_id : applicable_ops) {
+                if (plan_selector->is_ordering_preserved(op_id)) {
+                    need_extending = true;
+                    // cout << "Ordering preserved for" << task_proxy.get_operators()[op_id].get_name() << ", need extending" << endl;
+                } else {
+                    remaining_applicable_ops_set[op_id.get_index()] = true;
+                    // cout << "Remaining: " << task_proxy.get_operators()[op_id].get_name() << endl;
+                    // num_remaining++;
+                }
+            }
+            // std::cout << "Non-stabilized remaining after pruning " << num_remaining << " applicable operators" << std::endl;
+            if (need_extending) {
+                // Preserve the ordering in the original vector
+                vector<OperatorID> alternative_applicable_ops;
+                int num_applicable_stabilized = 0;
+                for (OperatorID op_id : preserve_applicable_ops) {
+                    if (plan_selector->is_ordering_preserved(op_id)) {
+                        alternative_applicable_ops.push_back(op_id);
+                        num_applicable_stabilized++;
+                    } else if (remaining_applicable_ops_set[op_id.get_index()]) {
+                        alternative_applicable_ops.push_back(op_id);
+                        // cout << "Keeping: " << task_proxy.get_operators()[op_id].get_name() << endl;
+                    }
+                } 
+                if (num_applicable_stabilized == plan_selector->get_num_preserved()) {
+                    // All stable operators are applicable, add stable operators only
+                    alternative_applicable_ops.swap(applicable_ops);
+                    // cout << " --> Need extending: all " << plan_selector->get_num_preserved() << " stabilized actions are applicable, at least one but not all survived pruning" << endl;
+                } else {
+                    // At least one stable operator is not applicable, no pruning.
+                    preserve_applicable_ops.swap(applicable_ops);
+                    // cout << " --> No pruning: Number of non-applicable stabilized actions is " <<  plan_selector->get_num_preserved() - num_applicable_stabilized << endl;
+                }
+                // std::cout << "Extended after pruning " << applicable_ops.size() << " applicable operators" << std::endl;
+            // } else {
+            //     cout << " --> No need extending" << endl;
+            }
+        }
 
         // This evaluates the expanded state (again) to get preferred ops
         EvaluationContext eval_context(s, node->get_g(), false, &statistics, true);
@@ -634,6 +696,8 @@ namespace kstar
                 ste.compute_delta();
                 this->HinLists[succ_state].erase_ste_from_set(ste);
                 this->HinLists[succ_state].insert_ste_to_set(ste);
+                if (write_dot)
+                    ste_for_dump.push_back(ste);
             }
             else
             {
@@ -685,6 +749,8 @@ namespace kstar
                         this->HinLists[succ_state].erase_ste_from_set(ste);
                         this->HinLists[succ_state].insert_ste_to_set(ste);
                         this->HinLists[succ_state].node_closed = false;
+                        if (write_dot)
+                            ste_for_dump.push_back(ste);
                     }
                     else
                     {
@@ -710,6 +776,8 @@ namespace kstar
                     
                     if (!this->reopen_occurred && HinLists[succ_state].node_closed)
                         this->HinLists[succ_state].push_back_ste_handle_to_sorted_list(ste);
+                    if (write_dot)
+                        ste_for_dump.push_back(ste);
                 }
             }
         }
@@ -797,7 +865,7 @@ namespace kstar
         if (this->goal_root != nullptr) 
             this->goal_root.reset();
         
-        this->number_of_plans = this->astar_number_of_plans;                
+        this->number_of_plans = 1;                
         this->plan_selector->clear();       // clear unordered_set inside plan extender
         
         if (plan_selector->decode_plans_upfront())
@@ -1099,7 +1167,7 @@ namespace kstar
                 // TODO: When we move things into the plan extender, we can change its behavior to not check for duplicates
                 //       and store plans in the case when no decoding upfront was performed.
                 plan_selector->add_plan_no_duplicate_check(get_plan());
-                count_plans = this->astar_number_of_plans;
+                count_plans = 1;
             }
             
             // process kstar plans
@@ -1162,6 +1230,19 @@ namespace kstar
             int f_value = eval_context.get_evaluator_value(f_evaluator.get());
             statistics.report_f_value_progress(f_value);
         }
+    }
+
+    void TopKEagerSearch::write_dot_file() const {
+        ofstream file;
+        file.open ("kstar_search_space.dot");
+        file << "digraph kstar_search_space {" << endl;
+        search_space.write_nodes(file);
+        // search_space.write_edges(file, task_proxy);
+        for (auto ste : ste_for_dump) {
+            ste.write(file, task_proxy);
+        }
+        file << "}" << endl;
+        file.close();
     }
 
     void add_options_to_parser(OptionParser &parser)

@@ -47,6 +47,8 @@ static shared_ptr<SearchEngine> _parse(OptionParser &parser) {
     parser.add_option<string>("preserve_orders_actions_regex",
         "A regex expression for specifying actions whose orders are not to be ignored",
         OptionParser::NONE);
+    parser.add_option<bool>("allow_greedy_por", "Allow for partial order reduction when preserve_orders_actions_regex is used", "false");
+    parser.add_option<bool>("write_dot", "Write a dot file kstar_search_space.dot", "false");
         
     parser.add_option<shared_ptr<Group>>(
         "symmetries",

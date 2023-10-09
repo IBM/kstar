@@ -7,6 +7,7 @@
 #include "../state_registry.h"
 #include "../search_space.h"
 
+#include <fstream>
 #include <algorithm>
 #include <vector>
 #include <unordered_set>
@@ -133,6 +134,11 @@ struct SideTrackEdge {
 
     int get_delta() {
         return this->delta;
+    }
+
+    void write(std::ofstream &file, const TaskProxy &task_proxy) const {
+        file << "    s" << from << " -> s" << to << " [label=\""
+             << task_proxy.get_operators()[op].get_name() << "\"];" << std::endl;
     }
 };
 
