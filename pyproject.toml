@@ -10,7 +10,7 @@ requires-python = ">=3.8"
 license = {file = "LICENSE"}
 keywords = ["planning"]
 authors = [
-    {name = "Michael Katz, Junkyu Lee", email="michael.katz1@ibm.com, junkyu.lee@ibm.com"}
+    {name = "Michael Katz, Junkyu Lee", email="michael.katz1@ibm.com"}
 ]
 
 dependencies = []
