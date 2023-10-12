@@ -10,10 +10,18 @@ requires-python = ">=3.8"
 license = {file = "LICENSE"}
 keywords = ["planning"]
 authors = [
-    {name = "IBM"}
+    {name = "Michael Katz, Junkyu Lee", email="michael.katz1@ibm.com, junkyu.lee@ibm.com"}
 ]
+
 dependencies = []
 dynamic = ["version"]
+
+classifiers = [
+"License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/IBM/kstar"
 
 [tool.setuptools]
 py-modules = ["_custom_build"]
