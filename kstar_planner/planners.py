@@ -18,7 +18,8 @@ def run_planner(planner_args) -> dict:
         with tempfile.NamedTemporaryFile() as result_file:
 
             args_json_name = [a.replace("PLANS_JSON_NAME", str(result_file.name)) for a in planner_args]
-            subprocess.run([sys.executable, "-B", "-m", "driver.main"] + default_build_args + args_json_name)
+            subprocess.run([sys.executable, "-B", "-m", "driver.main"] + default_build_args + args_json_name, 
+                           stdout = subprocess.DEVNULL, stderr = subprocess.STDOUT)
 
             with open(str(result_file.name)) as plans_file:
                 data = json.load(plans_file)
