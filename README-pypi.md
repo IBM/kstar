@@ -25,29 +25,14 @@ pip install kstar-planner
 
 OK* with lmcut heuristic
 ```python
-import sys
-import subprocess
-import logging
-from subprocess import SubprocessError
+from kstar_planner import planners
 from pathlib import Path
-
-build_dir = Path(kstar_planner.__file__).parent / 'builds' / 'release' / 'bin'
 
 domain_file = Path("your/path/domain.pddl")
 problem_file = Path("your/path/problem.pddl")
-result_file = Path("your/path/result.json")
-heuristic = "lmcut(transform=undo_to_origin())"
-num_plans = "100"
-build_args = ["--build", str(build_dir.absolute())]
-planner_args = [str(domain_file.absolute()), str(problem_file.absolute()), "--symmetries", "sym=structural_symmetries(time_bound=0,search_symmetries=oss,stabilize_initial_state=false,keep_operator_symmetries=true)", "--search", f"kstar({heuristic}, k={num_plans}, symmetries=sym, dump_plan_files=false, json_file_to_dump={str(result_file.absolute())})"]
 
-try:
-    subprocess.check_output([sys.executable, "-B", "-m", "driver.main"] + build_args + planner_args)
-
-except SubprocessError as err:
-    logging.error(err.output.decode())
-
-print(result_file.read_text())
+plans = planners.plan_topk(domain_file=domain_file, problem_file=problem_file, number_of_plans_bound=100, timeout=30)
+print(plans)
 ```
 
 ## Top-quality
@@ -55,70 +40,33 @@ print(result_file.read_text())
 
 OK* with iPDB heuristic (recommended)
 ```python
-import sys
-import subprocess
-import logging
-from subprocess import SubprocessError
+from kstar_planner import planners
 from pathlib import Path
-
-build_dir = Path(kstar_planner.__file__).parent / 'builds' / 'release' / 'bin'
 
 domain_file = Path("your/path/domain.pddl")
 problem_file = Path("your/path/problem.pddl")
-result_file = Path("your/path/result.json")
+
 heuristic = "ipdb(transform=undo_to_origin())"
-quality_bound = "1.0"
-build_args = ["--build", str(build_dir.absolute())]
-planner_args = [str(domain_file.absolute()), str(problem_file.absolute()), "--symmetries", "sym=structural_symmetries(time_bound=0,search_symmetries=oss,stabilize_initial_state=false,keep_operator_symmetries=true)", "--search", f"kstar({heuristic}, q={quality_bound}, symmetries=sym, dump_plan_files=false, json_file_to_dump={str(result_file.absolute())})"]
 
-try:
-    subprocess.check_output([sys.executable, "-B", "-m", "driver.main"] + build_args + planner_args)
-
-except SubprocessError as err:
-    logging.error(err.output.decode())
-
-print(result_file.read_text())
+plans = planners.plan_topq(domain_file=domain_file, problem_file=problem_file, quality_bound=1.0,number_of_plans_bound=100, timeout=30, search_heuristic=heuristic)
+print(plans)
 ```
 
 ## Unordered Top-quality
 
 ORK* with iPDB heuristic (recommended)
 ```python
-import sys
-import subprocess
-import logging
-from subprocess import SubprocessError
+from kstar_planner import planners
 from pathlib import Path
-
-build_dir = Path(kstar_planner.__file__).parent / 'builds' / 'release' / 'bin'
 
 domain_file = Path("your/path/domain.pddl")
 problem_file = Path("your/path/problem.pddl")
-result_file = Path("your/path/result.json")
+
 heuristic = "ipdb(transform=undo_to_origin())"
-quality_bound = "1.0"
-build_args = ["--build", str(build_dir.absolute())]
-planner_args = [str(domain_file.absolute()), str(problem_file.absolute()), "--symmetries", "sym=structural_symmetries(time_bound=0,search_symmetries=oss,stabilize_initial_state=false,keep_operator_symmetries=true)", "--search", f"kstar({heuristic}, q={quality_bound}, symmetries=sym, pruning=limited_pruning(pruning=atom_centric_stubborn_sets(use_sibling_shortcut=true, atom_selection_strategy=quick_skip)), find_unordered_plans=true, dump_plan_files=false, json_file_to_dump={str(result_file.absolute())})"]
 
-try:
-    subprocess.check_output([sys.executable, "-B", "-m", "driver.main"] + build_args + planner_args)
-
-except SubprocessError as err:
-    logging.error(err.output.decode())
-
-print(result_file.read_text())
+plans = planners.plan_unordered_topq(domain_file=domain_file, problem_file=problem_file, quality_bound=1.0,number_of_plans_bound=100, timeout=30, search_heuristic=heuristic)
+print(plans)
 ```
-
-## Additional options
-* Optimization of switching K* from A* to EA is controlled by the following parameters:
-    * `openlist_inc_percent_lb` (default `1`) 
-    * `openlist_inc_percent_ub` (default `5`) 
-    * `switch_on_goal` (default `false`)
-* Dumping plans:
-    * In case only the number of plans is needed, not the actual plans, an option `dump_plans=false` can be used
-    * Dumping the plans into separate files can be avoided with `dump_plan_files=false`
-    * Dumping the plans into a single JSON file can be done by specifying `json_file_to_dump=<filename>`
-
 
 
 ## Citing
