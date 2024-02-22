@@ -1151,10 +1151,10 @@ namespace kstar
 
     void TopKEagerSearch::save_plan_if_necessary()
     {
-        if ((!plan_selector->is_dump_plans()) || this->number_of_plans == 0)
+        if (!plan_selector->is_dump_plans())
             return; 
 
-        if (!plan_selector->decode_plans_upfront() && this->number_of_plans != (int) plan_selector->num_decoded_plans())
+        if (this->number_of_plans > 0 && !plan_selector->decode_plans_upfront() && this->number_of_plans != (int) plan_selector->num_decoded_plans())
         {
             int count_plans = 0;
             if (plan_selector->num_decoded_plans() > 0) {
