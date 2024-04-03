@@ -31,7 +31,10 @@ def run_planner(planner_args) -> dict:
             if plans_file.is_file() and plans_file.stat().st_size > 0:
                 plans = json.loads(plans_file.read_text(encoding="UTF-8"))
 
-            data["plans"] = plans
+            data["plans"] = plans["plans"]
+            # TODO: currently, unsolvable is set to true if the planner finished successfully but did not return any plans.
+            #        In the future, we could look for specific codes returned by the planner, e.g., search exit code: 12 
+            #                        (see full list at https://www.fast-downward.org/ExitCodes)
             data["unsolvable"] = len(data["plans"]) == 0 and not data["timeout_triggered"] and len(data["planner_error"]) == 0
             return data
         
