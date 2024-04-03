@@ -13,6 +13,57 @@ The planner implements
 * Partial order reduction: RK* search 
 
 
+# Quickstart: Using Kstar Planner as a Python package
+
+The KStar Planner can be easily installed as a Python package using Pip for simplified integration.
+
+```bash
+pip install kstar-planner
+```
+
+Obtaining plans through KStar Planner is made incredibly straightforward and user-friendly. Let us show a few examples. To retrieve 100 top-quality plans with a quality bound value of 1.0, simply provide the PDDL domain and problem paths to the function displayed below.
+
+```python
+from kstar_planner import planners
+from pathlib import Path
+
+domain_file = Path("your/path/domain.pddl")
+problem_file = Path("your/path/problem.pddl")
+
+heuristic = "ipdb(transform=undo_to_origin())"
+
+plans = planners.plan_topq(domain_file=domain_file, problem_file=problem_file, quality_bound=1.0,number_of_plans_bound=100, timeout=30, search_heuristic=heuristic)
+print(plans)
+```
+
+Obtaining unordered, high-quality plans follows a comparable process to acquiring top-quality plans.
+
+```python
+from kstar_planner import planners
+from pathlib import Path
+
+domain_file = Path("your/path/domain.pddl")
+problem_file = Path("your/path/problem.pddl")
+
+heuristic = "ipdb(transform=undo_to_origin())"
+
+plans = planners.plan_unordered_topq(domain_file=domain_file, problem_file=problem_file, quality_bound=1.0,number_of_plans_bound=100, timeout=30, search_heuristic=heuristic)
+print(plans)
+```
+
+For those who desire a specific quantity of top-quality plans without specifying a quality bound value, utilize the Top-K Planner.
+
+```python
+from kstar_planner import planners
+from pathlib import Path
+
+domain_file = Path("your/path/domain.pddl")
+problem_file = Path("your/path/problem.pddl")
+
+plans = planners.plan_topk(domain_file=domain_file, problem_file=problem_file, number_of_plans_bound=100, timeout=30)
+print(plans)
+```
+
 # Building
 For building the code please use
 ```
@@ -77,9 +128,6 @@ ORK* with iPDB heuristic (recommended)
     * Dumping the plans into separate files can be avoided with `dump_plan_files=false`
     * Dumping the plans into a single JSON file can be done by specifying `json_file_to_dump=<filename>`
 
-
-
-
 # Building the package:
 ```bash
 # Testing locally
@@ -96,9 +144,6 @@ python -m cibuildwheel --platform macos
 # CI needs a Mac or Windows VMs, or [docker contexts](https://github.com/StefanScherer/windows-docker-machine), to build wheels for those OSes
 ```
 
-
-
-
 # Using as a package:
 ```bash
 pip install git+https://github.com/IBM/kstar.git
@@ -111,12 +156,10 @@ import logging
 from subprocess import SubprocessError
 
 try:
-    output = subprocess.check_output([sys.executable, "-m" "driver.main", "..your args"])
+    output = subprocess.check_output([sys.executable, "-m" "kstar_planner.driver.main", "..your args"])
 except SubprocessError as err:
     logging.error(err.output.decode())
 ```
-
-
 
 ## Citing
 
