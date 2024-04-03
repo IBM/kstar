@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 import kstar_planner
-build_dir = Path(kstar_planner.__file__).parent.parent / 'builds' / 'release' / 'bin'
+build_dir = Path(kstar_planner.__file__).parent / 'builds' / 'release' / 'bin'
 default_build_args = ["--build", str(build_dir.absolute())]
 
 def run_planner(planner_args) -> dict:
