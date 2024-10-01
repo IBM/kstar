@@ -392,10 +392,6 @@ RootTask::RootTask(istream &in) {
         op.preconditions.push_back(FactPair(num_variables, 0));
     }
 
-    for (ExplicitOperator &op : axioms) {
-        // Adding the condition on the extra variable to all original axioms
-        op.effects[0].conditions.push_back(FactPair(num_variables, 0));
-    }
 
     // Adding an extra operator, preconditioned by original goal, and changing the value of all 
     // variables to the extra value
@@ -410,18 +406,10 @@ RootTask::RootTask(istream &in) {
         int goal_val = new_goal_values[i];
         ExplicitVariable var = variables[i];
         if (var.axiom_layer == -1) {
-            // For regular variables, adding effect to the goal-achieving action
+            // For regular variables, adding effect to the goal-achieving action and goal value
             operators[operators.size() - 1].effects.push_back(ExplicitEffect(i, goal_val, vector<FactPair>()));
-        } else {
-            // For derived variables, adding an axiom per variable, conditioned on the extra variable achieving the goal value.
-            axioms.push_back(ExplicitOperator());
-            axioms[axioms.size() - 1].cost = 0;
-            axioms[axioms.size() - 1].name = "<goal-axiom>";
-            axioms[axioms.size() - 1].is_an_axiom = true;
-            axioms[axioms.size() - 1].effects.push_back(ExplicitEffect(i, goal_val, vector<FactPair>()));
-            axioms[axioms.size() - 1].effects[0].conditions.push_back(FactPair(num_variables, 1));
+            goals.push_back(FactPair(i, goal_val));
         }
-        goals.push_back(FactPair(i, goal_val));
     }
     /*
       HACK: We use a TaskProxy to access g_axiom_evaluators here which assumes
