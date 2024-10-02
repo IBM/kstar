@@ -43,7 +43,7 @@ def get_plan_costs(plans_folder):
 
 def plans(content, props):
     run_dir = os.path.join("data", props["experiment_name"], props["run_dir"])
-    print(run_dir)
+    # print(run_dir)
     plans_dir = os.path.join(run_dir, 'found_plans')
     costs = get_plan_costs(plans_dir)
     props["plan_costs"] = costs
