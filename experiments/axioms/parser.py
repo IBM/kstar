@@ -33,6 +33,7 @@ def get_plan_costs(plans_folder):
         name = "sas_plan.%d" % counter
         plan_filename = os.path.join(plans_folder, name)
         if not os.path.exists(plan_filename):
+            #print(f"file does not exist {plan_filename}")
             break
         cost = get_plan_cost(plan_filename)
         if cost is not None:
@@ -41,7 +42,7 @@ def get_plan_costs(plans_folder):
 
 
 def plans(content, props):
-    run_dir = props["run_dir"]
+    run_dir = os.path.join("data", props["experiment_name"], props["run_dir"])
     print(run_dir)
     plans_dir = os.path.join(run_dir, 'found_plans')
     costs = get_plan_costs(plans_dir)
@@ -59,6 +60,7 @@ def get_run_dir(content, props):
     # the entire json is in content, adding only run_dir to props
     data = json.loads(content)
     props["run_dir"] = data["run_dir"]
+    props["experiment_name"] = data["experiment_name"]
 
 def coverage(content, props):
     props["coverage"] = int("total_time" in props)
