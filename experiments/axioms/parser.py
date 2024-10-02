@@ -41,10 +41,16 @@ def get_plan_costs(plans_folder):
 
 
 def plans(content, props):
-    costs = get_plan_costs('found_plans')
+    #run_dir = get_data_from_static()["run_dir"]
+    run_dir = os.getcwd()
+    print(run_dir)
+    plans_dir = os.path.join(run_dir, 'found_plans')
+    costs = get_plan_costs(plans_dir)
     props["plan_costs"] = costs
     props["num_plans"] = len(costs)
-
+    if len(costs) > 0:
+        props["plan_cost_min"] = min(costs)
+        props["plan_cost_max"] = max(costs)
 
 def get_data_from_static():
     with open("static-properties", 'r') as sp:
@@ -65,7 +71,8 @@ def kstar_coverage(content, props):
                 # kstar terminated normally before finding desired number of plans
                 proved_no_more_plans = True
     except:
-        print("normal_termination missing -> can't compute kstar coverage")
+        #print("normal_termination missing -> can't compute kstar coverage")
+        pass
     else:    
         props["kstar_coverage"] = int(k_bound_reached or proved_no_more_plans)
         props["kstar_coverage_ratio"] = float("{:.3f}".format(float(props["num_plans"]) / float(props["k"])))
@@ -75,12 +82,14 @@ def timer_values(content, props):
     try:
         props["after_goal_astar_time"] = props["total_astar_time"] - props["first_astar_time"]
     except:
-        print("total/first_astar_time missing -> can't compute after_goal_astar_time")
+        #print("total/first_astar_time missing -> can't compute after_goal_astar_time")
+        pass
     
     try:
         props["total_kstar_time"] = props["total_astar_time"] + props["total_eppstein_time"]
     except:
-        print("total_astar/eppstein_time missing -> can't compute total_kstar_time")
+        #print("total_astar/eppstein_time missing -> can't compute total_kstar_time")
+        pass
 
 def _get_states_pattern(attribute, name):
     return (attribute, rf"{name}=(\d+) state\(s\)\.", int)
@@ -126,7 +135,7 @@ def multiplan_validation(content, props):
 class KstarParser(Parser):
     def __init__(self):
         Parser.__init__(self)
-
+        print(os.getcwd())
         self.add_pattern("k", r"initialize::top-(\d+)", type=int)
         self.add_pattern("normal_termination", r"normal_termination=(\d+)", type=int)
         # steps

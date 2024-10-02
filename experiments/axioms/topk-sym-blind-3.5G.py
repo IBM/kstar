@@ -74,6 +74,9 @@ KSTAR_ATTRIBUTES = [
     # plans
     "num_plans",
     "num_found_plans",
+    "plan_costs",
+    "plan_cost_min",
+    "plan_cost_max",
     "dump_plans",
     "stop_on_k",
     "stop_on_q",
