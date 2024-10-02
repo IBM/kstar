@@ -41,8 +41,7 @@ def get_plan_costs(plans_folder):
 
 
 def plans(content, props):
-    #run_dir = get_data_from_static()["run_dir"]
-    run_dir = os.getcwd()
+    run_dir = props["run_dir"]
     print(run_dir)
     plans_dir = os.path.join(run_dir, 'found_plans')
     costs = get_plan_costs(plans_dir)
@@ -56,6 +55,10 @@ def get_data_from_static():
     with open("static-properties", 'r') as sp:
         return json.load(sp)
 
+def get_run_dir(content, props):
+    # the entire json is in content, adding only run_dir to props
+    data = json.loads(content)
+    props["run_dir"] = data["run_dir"]
 
 def coverage(content, props):
     props["coverage"] = int("total_time" in props)
@@ -65,7 +68,7 @@ def kstar_coverage(content, props):
     k_bound_reached = proved_no_more_plans= False
     try:
         if props["normal_termination"] == 1:
-            if props["num_plans"] >= props.get("k", 10000):
+            if props["num_plans"] >= props.get("k", 1000):
                 k_bound_reached = True
             else:       
                 # kstar terminated normally before finding desired number of plans
@@ -135,7 +138,7 @@ def multiplan_validation(content, props):
 class KstarParser(Parser):
     def __init__(self):
         Parser.__init__(self)
-        print(os.getcwd())
+
         self.add_pattern("k", r"initialize::top-(\d+)", type=int)
         self.add_pattern("normal_termination", r"normal_termination=(\d+)", type=int)
         # steps
@@ -153,6 +156,7 @@ class KstarParser(Parser):
         for name, pattern, typ in first_astar_patterns:
             self.add_pattern(name, pattern, type=typ)
 
+        self.add_function(get_run_dir, file="static-properties")
         self.add_function(plans)
         self.add_function(kstar_coverage)
         self.add_function(timer_values)
