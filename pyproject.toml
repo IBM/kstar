@@ -23,6 +23,9 @@ classifiers = [
 [project.urls]
 "Homepage" = "https://github.com/IBM/kstar"
 
+[project.scripts]
+kstar_planner = "kstar_planner.__main__:main"
+
 [tool.setuptools]
 py-modules = ["_custom_build"]
 
