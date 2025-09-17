@@ -10,7 +10,7 @@ def get_plan_unordered_topq(
     problem: str,
     timeout: int = 600,
     quality_bound: float = 1.0,
-    num_plans: int = 1,
+    num_plans: int = 10,
 ) -> dict:
     planner_result = dict()
 

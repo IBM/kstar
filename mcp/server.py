@@ -32,7 +32,7 @@ def get_fastmcp_server(name: str) -> FastMCP:
             description=QUALITY_BOUND_DESCRIPTION,
         ),
         num_plans: int = Field(
-            default=1,
+            default=10,
             description=NUM_PLANS_DESCRIPTION,
         ),
     ) -> UnorderedTopQPlannerOutput:
