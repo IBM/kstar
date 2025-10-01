@@ -70,6 +70,7 @@ exp.add_step("parse", exp.parse)
 
 exp.add_fetcher(name='fetch')
 # exp.add_parse_again_step()
+exp.add_fetcher('data/axioms-2024-10-02-top-1000-noh2-3.5g-eval')
 
 KSTAR_ATTRIBUTES = [
     # plans
