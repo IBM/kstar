@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         arch: [ x86_64, aarch64 ]
-        python: [ cp38-*, cp39-*, cp310-*, cp311-*, cp312-* ]
+        python: [ cp38-*, cp39-*, cp310-*, cp311-*, cp312-*, cp313-* ]
     steps:
       - uses: actions/checkout@v3
       # Used to host cibuildwheel
@@ -22,7 +22,7 @@ jobs:
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v2
       - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==2.20.0
+        run: python -m pip install cibuildwheel==2.21.3
       - name: Build wheels
         env:
           CIBW_BUILD: ${{ matrix.python }}
@@ -43,21 +43,21 @@ jobs:
           files: |
             ./wheelhouse/**
   build_mac:
-    name: Build wheels on macos-13
-    runs-on: macos-13
+    name: Build wheels on macos-14
+    runs-on: macos-14
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       # Used to host cibuildwheel
       - uses: actions/setup-python@v4
         with:
           python-version: |
             3.11
       - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==2.20.0
+        run: python -m pip install cibuildwheel==2.21.3
       - name: Build wheels
         env:
           CIBW_BEFORE_BUILD: python -m pip install pip Cython --upgrade
-          CIBW_ARCHS_MACOS: x86_64 arm64
+          CIBW_ARCHS_MACOS: x86_64 arm64 universal2
           CIBW_SKIP: pp* *-musllinux*
         run: python -m cibuildwheel --output-dir wheelhouse
         # to supply options, put them in 'env', like:
