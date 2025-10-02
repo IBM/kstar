@@ -5,7 +5,6 @@ on:
     tags:
       - "*.*.*"
     branches:
-      - macso_action_fix
       - actions*
 jobs:
   build_linux:
