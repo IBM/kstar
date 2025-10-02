@@ -61,7 +61,8 @@ jobs:
           CIBW_BEFORE_BUILD: python -m pip install pip Cython --upgrade
           CIBW_ARCHS_MACOS: x86_64 arm64 universal2
           CIBW_SKIP: pp* *-musllinux*
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
+          # CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: ""
         run: python -m cibuildwheel --output-dir wheelhouse
         # to supply options, put them in 'env', like:
         # env:
