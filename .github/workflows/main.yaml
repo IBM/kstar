@@ -45,11 +45,8 @@ jobs:
           files: |
             ./wheelhouse/**
   build_mac:
-    name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-latest]
+    name: Build wheels on macos-14
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
       # Used to host cibuildwheel
