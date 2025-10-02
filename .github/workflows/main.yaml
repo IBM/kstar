@@ -50,6 +50,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # Used to host cibuildwheel
+      - name: Install macOS Command Line Tools
+        run: xcode-select --install || true
       - uses: actions/setup-python@v4
         with:
           python-version: |
