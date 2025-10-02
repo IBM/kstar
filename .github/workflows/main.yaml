@@ -48,7 +48,7 @@ jobs:
     name: Build wheels on macos-14
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       # Used to host cibuildwheel
       # - uses: actions/setup-python@v5
       - name: Build wheels
