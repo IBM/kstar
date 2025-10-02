@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - "*.*.*"
+    branches:
+      - macso_action_fix
+      - actions*
 jobs:
   build_linux:
     name: Build wheels on ubuntu-latest ${{ matrix.arch }} ${{ matrix.python }}
