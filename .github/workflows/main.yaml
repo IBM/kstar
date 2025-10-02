@@ -7,43 +7,6 @@ on:
     branches:
       - actions*
 jobs:
-  build_linux:
-    name: Build wheels on ubuntu-latest ${{ matrix.arch }} ${{ matrix.python }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [ x86_64, aarch64 ]
-        python: [ cp38-*, cp39-*, cp310-*, cp311-*, cp312-*, cp313-* ]
-    steps:
-      - uses: actions/checkout@v3
-      # Used to host cibuildwheel
-      - uses: actions/setup-python@v4
-        with:
-          python-version: |
-            3.11
-      - name: Setup QEMU
-        uses: docker/setup-qemu-action@v2
-      - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==2.21.3
-      - name: Build wheels
-        env:
-          CIBW_BUILD: ${{ matrix.python }}
-          CIBW_BEFORE_BUILD: python -m pip install pip Cython --upgrade
-          CIBW_ARCHS_LINUX: ${{ matrix.arch }}
-          CIBW_SKIP: pp* *-musllinux*
-        run: python -m cibuildwheel --output-dir wheelhouse
-        # to supply options, put them in 'env', like:
-        # env:
-        #   CIBW_SOME_OPTION: value
-      - name: Install dependencies
-        run: python -m pip install setuptools wheel twine
-      - name: Publish to PyPI 
-        run: twine upload -u __token__ -p ${{ secrets.PYPI_ACCESS_TOKEN }} ./wheelhouse/* 
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            ./wheelhouse/**
   build_mac:
     name: Build wheels on macos-14
     runs-on: macos-14
@@ -55,13 +18,13 @@ jobs:
           python-version: |
             3.11
       - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==2.21.3
+        run: python -m pip install cibuildwheel==2.22.0
       - name: Build wheels
         env:
           CIBW_BEFORE_BUILD: python -m pip install pip Cython --upgrade
           CIBW_ARCHS_MACOS: x86_64 arm64 universal2
           CIBW_SKIP: pp* *-musllinux*
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}"
+          # CIBW_REPAIR_WHEEL_COMMAND_MACOS: ""
         run: python -m cibuildwheel --output-dir wheelhouse
         # to supply options, put them in 'env', like:
         # env:
