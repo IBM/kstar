@@ -1,1 +1,2 @@
+kstar-planner
 fastmcp==2.12.0
