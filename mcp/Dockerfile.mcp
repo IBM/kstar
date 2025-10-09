@@ -3,7 +3,6 @@ FROM python:3.11
 RUN apt-get update && apt-get install -y cmake make g++
 COPY mcp /src/mcp
 WORKDIR /src
-RUN pip install git+https://github.com/IBM/kstar.git
 RUN pip install -r mcp/requirements.txt
 
 EXPOSE 8000
