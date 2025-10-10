@@ -99,8 +99,8 @@ jobs:
         run: docker run -p 8000:8000 --name kstar-planner -d kstar-planner:v0.0
       - name: Install Test dependencies
         run: |
-          pip install -r mcp/requirements.txt
-          pip install -r mcp/requirements_test.txt
+          pip install -r mcp_server/requirements.txt
+          pip install -r mcp_server/requirements_test.txt
       - name: Test MCP Server Container
         env:
           MCP_SERVER_URL: http://localhost:8000/mcp
