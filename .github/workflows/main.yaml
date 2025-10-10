@@ -80,9 +80,17 @@ jobs:
   build_mcp_server:
     name: Build and Test MCP Server Container
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5 # Use the latest version of setup-python
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip' # Option
       - name: Set up Docker
         uses: docker/setup-docker-action@v4
       - name: Build MCP Server Container
