@@ -1,8 +1,13 @@
 import os
 import pytest
-from mcp.tests.helpers.mcp_client_helper import get_client
-from mcp.tests.data.pddl.pddl_example import domain, problem
+from mcp_server.tests.data.pddl.pddl_example import domain, problem
+from fastmcp import Client
+from fastmcp.client.transports import StreamableHttpTransport
 
+
+def get_client(server_url) -> Client:
+    transport = StreamableHttpTransport(url=server_url)
+    return Client(transport)
 
 class TestMcpContainer:
     @pytest.mark.skipif(

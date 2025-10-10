@@ -10,10 +10,10 @@ K* MCP Server provides a containerized deployment of Top-K and Top-Q planners fr
 To build the Docker image, navigate to the project root directory (where the `pyproject.toml` is located) and execute the following command:
 
 ```bash
-docker build -f mcp/Dockerfile.mcp -t kstar-planner:v0.0 .
+docker build -f mcp_server/Dockerfile.mcp -t kstar-planner:v0.0 .
 ```
 
-*   `-f mcp/Dockerfile.mcp`: Specifies the Dockerfile to use for building the image.
+*   `-f mcp_server/Dockerfile.mcp`: Specifies the Dockerfile to use for building the image.
 *   `-t kstar-planner:v0.0`:  Tags the image as `kstar-planner` with the version `v0.0`.  You can replace `v0.0` with your desired version tag.
 *   `.`:  Indicates that the build context is the current directory.
    
