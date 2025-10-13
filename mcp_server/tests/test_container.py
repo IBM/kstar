@@ -23,10 +23,10 @@ class TestMcpContainer:
 
             payload = await client.call_tool(
                 "KstarPlannerUnorderedTopQ",
-                {"domain": domain, "problem": problem},
+                {"domain": domain, "problem": problem, "quality_bound": 20.0, "num_plans": 1000},
             )
             assert payload is not None
-            assert len(payload.structured_content["plans"]) == 1
+            assert len(payload.structured_content["plans"]) == 1000
             optimal_plan = payload.structured_content["plans"][0]
             assert len(optimal_plan["actions"]) == 4
             assert optimal_plan["cost"] == 4
