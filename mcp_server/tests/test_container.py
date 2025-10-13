@@ -25,8 +25,8 @@ class TestMcpContainer:
                 "KstarPlannerUnorderedTopQ",
                 {"domain": domain, "problem": problem, "quality_bound": 20.0, "num_plans": 1000},
             )
-            assert payload is not None
-            assert len(payload.structured_content["plans"]) == 1000
+            assert payload is not None, "Payload is empty."
+            assert len(payload.structured_content["plans"]) == 1000, "The number of plans is not 1000."
             optimal_plan = payload.structured_content["plans"][0]
-            assert len(optimal_plan["actions"]) == 4
-            assert optimal_plan["cost"] == 4
+            assert len(optimal_plan["actions"]) == 4, "Four actions should be found in the optimal plan."
+            assert optimal_plan["cost"] == 4, "The cost of the optimal plan should be 4."
