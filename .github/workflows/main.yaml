@@ -104,4 +104,4 @@ jobs:
       - name: Test MCP Server Container
         env:
           MCP_SERVER_URL: http://localhost:8000/mcp
-        run: python -m pytest mcp_server/tests/test_container.py
+        run: python -m pytest -s mcp_server/tests/test_container.py

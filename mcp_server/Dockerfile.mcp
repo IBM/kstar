@@ -1,6 +1,5 @@
 FROM python:3.11
 
-RUN apt-get update && apt-get install -y cmake make g++
 COPY mcp_server /src/mcp_server
 WORKDIR /src
 RUN pip install -r mcp_server/requirements.txt

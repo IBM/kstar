@@ -23,10 +23,27 @@ class TestMcpContainer:
 
             payload = await client.call_tool(
                 "KstarPlannerUnorderedTopQ",
-                {"domain": domain, "problem": problem},
+                {"domain": domain, "problem": problem, "quality_bound": 20.0, "num_plans": 1000},
             )
-            assert payload is not None
-            assert len(payload.structured_content["plans"]) == 1
+
+            assertion_status_payload = payload is not None
+            assert assertion_status_payload, "Payload is empty."
+            if assertion_status_payload:
+                print("Payload is not empty.")
+
+            assertion_status_plans = len(payload.structured_content["plans"]) == 1000
+            assert assertion_status_plans, "The number of plans returned by KstarPlannerUnorderedTopQ is not 1000."
+            if assertion_status_payload:
+                print("The number of plans returned by KstarPlannerUnorderedTopQ is 1000.")
+
             optimal_plan = payload.structured_content["plans"][0]
-            assert len(optimal_plan["actions"]) == 4
-            assert optimal_plan["cost"] == 4
+
+            assertion_status_actions = len(optimal_plan["actions"]) == 4
+            assert assertion_status_actions, "The number of actions found in the optimal plan returned by KstarPlannerUnorderedTopQ is not 4."
+            if assertion_status_actions:
+                print("Four actions are found in the optimal plan returned by KstarPlannerUnorderedTopQ.")
+            
+            assertion_status_cost = optimal_plan["cost"] == 4
+            assert assertion_status_cost, "The cost of the optimal plan returned by KstarPlannerUnorderedTopQ is not 4."
+            if assertion_status_cost:
+                print("The cost of the optimal plan returned by KstarPlannerUnorderedTopQ is 4.")
