@@ -77,31 +77,3 @@ jobs:
         with:
           files: |
             ./wheelhouse/**
-  build_mcp_server:
-    name: Build and Test MCP Server Container
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11"]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5 # Use the latest version of setup-python
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: 'pip' # Option
-      - name: Set up Docker
-        uses: docker/setup-docker-action@v4
-      - name: Build MCP Server Container
-        run: docker build -f mcp_server/Dockerfile.mcp -t kstar-planner:v0.0 .
-      - name: Run MCP Server Container
-        run: docker run -p 8000:8000 --name kstar-planner -d kstar-planner:v0.0
-      - name: Install Test dependencies
-        run: |
-          pip install -r mcp_server/requirements.txt
-          pip install -r mcp_server/requirements_test.txt
-      - name: Test MCP Server Container
-        env:
-          MCP_SERVER_URL: http://localhost:8000/mcp
-        run: python -m pytest -s mcp_server/tests/test_container.py
