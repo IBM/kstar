@@ -57,28 +57,38 @@ class BuildCMakeExt(build_ext):
 
         config = 'Debug' if self.debug else 'Release'
         num_cpus = 4
+        try:
+            num_cpus = multiprocessing.cpu_count()
+        except NotImplementedError:
+            pass
+        
         if os.name == "posix":
-            try:
-                num_cpus = multiprocessing.cpu_count()
-            except NotImplementedError:
-                pass
             CMAKE_GENERATOR = "Unix Makefiles"
+            cmake_args = [
+                '-G', CMAKE_GENERATOR,
+                f'-DCMAKE_BUILD_TYPE={config}',
+                str(Path(ext.name).absolute())  # src directory path
+            ]
+            build_args = [
+                '--config', config,
+                '--', f'-j{num_cpus}'
+            ]
         elif os.name == "nt":
-            CMAKE_GENERATOR = "MinGW Makefiles"
+            # On Windows, use Ninja or Visual Studio generator
+            # Ninja is preferred for better compatibility with cibuildwheel
+            CMAKE_GENERATOR = "Ninja"
+            cmake_args = [
+                '-G', CMAKE_GENERATOR,
+                f'-DCMAKE_BUILD_TYPE={config}',
+                str(Path(ext.name).absolute())  # src directory path
+            ]
+            build_args = [
+                '--config', config,
+                '--parallel', str(num_cpus)
+            ]
         else:
             print("Unsupported OS: " + os.name)
             sys.exit(1)
-
-        cmake_args = [
-            '-G', CMAKE_GENERATOR,
-            f'-DCMAKE_BUILD_TYPE={config}',
-            Path(ext.name).absolute()  # src directory path
-        ]
-
-        build_args = [
-            '--config', config,
-            '--', f'-j{num_cpus}'
-        ]
 
         os.chdir(str(build_temp))
         self.spawn(['cmake', str(cwd)] + cmake_args)
