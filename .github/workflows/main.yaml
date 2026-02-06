@@ -45,6 +45,41 @@ jobs:
         with:
           files: |
             ./wheelhouse/**
+  build_windows:
+    name: Build wheels on windows-latest ${{ matrix.python }}
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python: [ cp38-*, cp39-*, cp310-*, cp311-*, cp312-*, cp313-* ]
+    steps:
+      - uses: actions/checkout@v4
+      # Used to host cibuildwheel
+      - uses: actions/setup-python@v4
+        with:
+          python-version: |
+            3.11
+      - name: Install Ninja
+        run: choco install ninja
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel==2.21.3
+      - name: Build wheels
+        env:
+          CIBW_BUILD: ${{ matrix.python }}
+          CIBW_BEFORE_BUILD: python -m pip install pip Cython --upgrade
+          CIBW_ARCHS_WINDOWS: AMD64
+          CIBW_SKIP: pp*
+        run: python -m cibuildwheel --output-dir wheelhouse
+      - name: Install dependencies
+        run: python -m pip install setuptools wheel twine
+      - name: Publish to PyPI
+        run: twine upload -u __token__ -p ${{ secrets.PYPI_ACCESS_TOKEN }} ./wheelhouse/*
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ./wheelhouse/**
   build_mac:
     name: Build wheels on macos-14
     runs-on: macos-14
