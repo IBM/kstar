@@ -58,16 +58,12 @@ jobs:
         with:
           python-version: |
             3.11
-      - name: Install Ninja
-        run: choco install ninja
-      - name: Setup MSVC
-        uses: ilammy/msvc-dev-cmd@v1
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel==2.21.3
       - name: Build wheels
         env:
           CIBW_BUILD: ${{ matrix.python }}
-          CIBW_BEFORE_BUILD: python -m pip install pip Cython --upgrade
+          CIBW_BEFORE_BUILD: python -m pip install pip Cython ninja --upgrade
           CIBW_ARCHS_WINDOWS: AMD64
           CIBW_SKIP: pp*
         run: python -m cibuildwheel --output-dir wheelhouse
