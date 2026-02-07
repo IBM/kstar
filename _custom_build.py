@@ -97,4 +97,47 @@ class BuildCMakeExt(build_ext):
         # Troubleshooting: if fail on line above then delete all possible
         # temporary CMake files including "CMakeCache.txt" in top level dir.
         os.chdir(str(cwd))
-        shutil.copytree(build_temp / 'bin', Path(self.build_lib) / 'kstar_planner' / 'builds' / 'release' / 'bin', dirs_exist_ok=True)
+        
+        # Copy built binaries
+        bin_dest = Path(self.build_lib) / 'kstar_planner' / 'builds' / 'release' / 'bin'
+        shutil.copytree(build_temp / 'bin', bin_dest, dirs_exist_ok=True)
+        
+        # On Windows with MinGW, copy required runtime DLLs
+        if os.name == "nt":
+            self._copy_mingw_dlls(bin_dest)
+    
+    def _copy_mingw_dlls(self, bin_dest):
+        """Copy MinGW runtime DLLs to the bin directory on Windows."""
+        import subprocess
+        
+        # Find the compiler executable
+        try:
+            result = subprocess.run(['where', 'g++'], capture_output=True, text=True, check=True)
+            gcc_path = Path(result.stdout.strip().split('\n')[0])
+            mingw_bin = gcc_path.parent
+            
+            # List of required DLLs
+            required_dlls = [
+                'libstdc++-6.dll',
+                'libgcc_s_seh-1.dll',
+                'libgcc_s_dw2-1.dll',  # 32-bit alternative
+                'libwinpthread-1.dll'
+            ]
+            
+            copied_count = 0
+            for dll_name in required_dlls:
+                dll_path = mingw_bin / dll_name
+                if dll_path.exists():
+                    dest_path = bin_dest / dll_name
+                    shutil.copy2(dll_path, dest_path)
+                    print(f"Copied {dll_name} to {dest_path}")
+                    copied_count += 1
+            
+            if copied_count > 0:
+                print(f"Successfully copied {copied_count} MinGW runtime DLL(s)")
+            else:
+                print("Warning: No MinGW DLLs found. If using MSVC, this is expected.")
+                
+        except (subprocess.CalledProcessError, FileNotFoundError, IndexError):
+            print("Warning: Could not locate MinGW compiler. Skipping DLL copy.")
+            print("If the executable fails to run, manually copy MinGW DLLs to the bin directory.")
