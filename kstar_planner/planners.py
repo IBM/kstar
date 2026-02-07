@@ -16,10 +16,16 @@ def run_planner(planner_args) -> dict:
 
     try:
         import tempfile
-        with tempfile.NamedTemporaryFile() as result_file:
-
-            args_json_name = [a.replace("PLANS_JSON_NAME", str(result_file.name)) for a in planner_args]
-            out = subprocess.run([sys.executable, "-B", "-m", "kstar_planner.driver.main"] + default_build_args + args_json_name, 
+        import os
+        # On Windows, NamedTemporaryFile cannot be accessed by other processes while open.
+        # Use delete=False and manually clean up instead.
+        result_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json')
+        result_file_path = result_file.name
+        result_file.close()  # Close it so the planner subprocess can write to it
+        
+        try:
+            args_json_name = [a.replace("PLANS_JSON_NAME", result_file_path) for a in planner_args]
+            out = subprocess.run([sys.executable, "-B", "-m", "kstar_planner.driver.main"] + default_build_args + args_json_name,
                            stdout = subprocess.PIPE, stderr = subprocess.PIPE)
 
             data["planner_output"] = out.stdout.decode()
@@ -28,17 +34,23 @@ def run_planner(planner_args) -> dict:
             data["timeout_triggered"] = "search::time limit" in data["planner_output"]
             data["plans"] = []
 
-            plans_file = Path(str(result_file.name))
+            plans_file = Path(result_file_path)
             if plans_file.is_file() and plans_file.stat().st_size > 0:
                 plans = json.loads(plans_file.read_text(encoding="UTF-8"))
                 data["plans"] = plans["plans"]
 
             # TODO: currently, unsolvable is set to true if the planner finished successfully but did not return any plans.
-            #        In the future, we could look for specific codes returned by the planner, e.g., search exit code: 12 
+            #        In the future, we could look for specific codes returned by the planner, e.g., search exit code: 12
             #                        (see full list at https://www.fast-downward.org/ExitCodes)
             #    Note that currently, K* returns search exit code: 12 when stopped on time limit
             data["unsolvable"] = len(data["plans"]) == 0 and not data["timeout_triggered"] and len(data["planner_error"]) == 0
             return data
+        finally:
+            # Clean up the temporary file
+            try:
+                os.unlink(result_file_path)
+            except OSError:
+                pass  # File might not exist or already deleted
         
     except SubprocessError as err:
         logging.error(err.output.decode())
