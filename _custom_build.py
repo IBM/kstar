@@ -97,4 +97,58 @@ class BuildCMakeExt(build_ext):
         # Troubleshooting: if fail on line above then delete all possible
         # temporary CMake files including "CMakeCache.txt" in top level dir.
         os.chdir(str(cwd))
-        shutil.copytree(build_temp / 'bin', Path(self.build_lib) / 'kstar_planner' / 'builds' / 'release' / 'bin', dirs_exist_ok=True)
+        
+        # Copy built binaries
+        bin_dest = Path(self.build_lib) / 'kstar_planner' / 'builds' / 'release' / 'bin'
+        shutil.copytree(build_temp / 'bin', bin_dest, dirs_exist_ok=True)
+        
+        # On Windows with MinGW, copy required runtime DLLs
+        if os.name == "nt":
+            self._copy_mingw_dlls(bin_dest)
+    
+    def _copy_mingw_dlls(self, bin_dest):
+        """Copy MinGW runtime DLLs to the bin directory on Windows.
+        
+        On Windows, there are two scenarios:
+        1. MSVC: Uses static linking (/MT flag), no DLLs needed (like macOS system libs)
+        2. MinGW/GCC: Requires runtime DLLs (unlike macOS where system libs are always available)
+        """
+        import subprocess
+        
+        print("Checking for Windows runtime dependencies...")
+        
+        # Check if we're using MinGW/GCC
+        try:
+            result = subprocess.run(['where', 'g++'], capture_output=True, text=True, check=True)
+            gcc_path = Path(result.stdout.strip().split('\n')[0])
+            mingw_bin = gcc_path.parent
+            print(f"Found MinGW compiler at: {gcc_path}")
+            
+            # List of required DLLs for MinGW
+            # These are the Windows equivalent of macOS's libc++.1.dylib and libSystem.B.dylib
+            # but unlike macOS, these are NOT part of the base Windows system
+            required_dlls = [
+                'libstdc++-6.dll',      # C++ standard library (like libc++.1.dylib on macOS)
+                'libgcc_s_seh-1.dll',   # GCC runtime for 64-bit
+                'libgcc_s_dw2-1.dll',   # GCC runtime for 32-bit
+                'libwinpthread-1.dll'   # POSIX threads (Windows doesn't have native pthreads)
+            ]
+            
+            copied_count = 0
+            for dll_name in required_dlls:
+                dll_path = mingw_bin / dll_name
+                if dll_path.exists():
+                    dest_path = bin_dest / dll_name
+                    shutil.copy2(dll_path, dest_path)
+                    print(f"   Copied {dll_name}")
+                    copied_count += 1
+            
+            if copied_count > 0:
+                print(f"Successfully bundled {copied_count} MinGW runtime DLL(s) for distribution")
+            else:
+                print("Warning: No MinGW DLLs found in compiler directory.")
+                
+        except (subprocess.CalledProcessError, FileNotFoundError, IndexError):
+            print("MinGW/GCC not found - assuming MSVC build with static linking.")
+            print("MSVC builds use /MT flag for static C++ runtime (no DLLs needed).")
+            print("This is similar to how macOS system libraries work.")
