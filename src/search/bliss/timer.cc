@@ -1,5 +1,9 @@
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <unistd.h>
 #include <sys/times.h>
+#endif
 #include "timer.h"
 
 /*
@@ -24,6 +28,47 @@
 
 namespace bliss {
 
+#ifdef _WIN32
+// Windows implementation using GetProcessTimes
+Timer::Timer()
+{
+  reset();
+}
+
+void Timer::reset()
+{
+  FILETIME creationTime, exitTime, kernelTime, userTime;
+  if (GetProcessTimes(GetCurrentProcess(), &creationTime, &exitTime, &kernelTime, &userTime)) {
+    ULARGE_INTEGER kt, ut;
+    kt.LowPart = kernelTime.dwLowDateTime;
+    kt.HighPart = kernelTime.dwHighDateTime;
+    ut.LowPart = userTime.dwLowDateTime;
+    ut.HighPart = userTime.dwHighDateTime;
+    // Convert 100-nanosecond intervals to seconds
+    start_time = (double)(kt.QuadPart + ut.QuadPart) / 10000000.0;
+  } else {
+    start_time = 0.0;
+  }
+}
+
+double Timer::get_duration()
+{
+  FILETIME creationTime, exitTime, kernelTime, userTime;
+  if (GetProcessTimes(GetCurrentProcess(), &creationTime, &exitTime, &kernelTime, &userTime)) {
+    ULARGE_INTEGER kt, ut;
+    kt.LowPart = kernelTime.dwLowDateTime;
+    kt.HighPart = kernelTime.dwHighDateTime;
+    ut.LowPart = userTime.dwLowDateTime;
+    ut.HighPart = userTime.dwHighDateTime;
+    // Convert 100-nanosecond intervals to seconds
+    double current_time = (double)(kt.QuadPart + ut.QuadPart) / 10000000.0;
+    return current_time - start_time;
+  }
+  return 0.0;
+}
+
+#else
+// Unix/Linux implementation using times()
 static const double numTicksPerSec = (double)(sysconf(_SC_CLK_TCK));
 
 Timer::Timer()
@@ -52,5 +97,6 @@ double Timer::get_duration()
     numTicksPerSec;
   return intermediate - start_time;
 }
+#endif
 
 } // namespace bliss
