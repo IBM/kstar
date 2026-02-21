@@ -362,7 +362,7 @@ RootTask::RootTask(istream &in) {
     */
 
     // Variables
-    // Add value to the domain, for all original variables
+    // Add value to the domain, for all regular variables
     for (int i = 0; i < num_variables; ++i) {
         variables[i].domain_size++;
         variables[i].fact_names.push_back("Atom __goal_value()");
@@ -381,10 +381,6 @@ RootTask::RootTask(istream &in) {
     for (auto var : variables) {
         new_goal_values.push_back(var.domain_size - 1);
     }
-    // // Rewriting for old goals
-    // for (auto fact : goals) {
-    //     new_goal_values[fact.var] = fact.value;
-    // }
 
     // Operators
     for (ExplicitOperator &op : operators) {
@@ -392,21 +388,28 @@ RootTask::RootTask(istream &in) {
         op.preconditions.push_back(FactPair(num_variables, 0));
     }
 
-
-    // Adding an extra operator, preconditioned by original goal, and changing the value of all 
+    // Adding an extra operator, preconditioned by original goal, and changing the value of all
     // variables to the extra value
     operators.push_back(ExplicitOperator());
     operators[operators.size() - 1].cost = 0;
     operators[operators.size() - 1].name = "__extra_goal_operator";
     operators[operators.size() - 1].is_an_axiom = false;
-    operators[operators.size() - 1].preconditions = move(goals);
+
+    vector<FactPair> original_goals = goals;
+    // Add all original goals (including derived variables) as preconditions
+    for (const auto& goal_fact : original_goals) {
+        operators[operators.size() - 1].preconditions.push_back(goal_fact);
+    }
     operators[operators.size() - 1].preconditions.push_back(FactPair(num_variables, 0));
-    goals.clear(); // Assigning new goal values
+    goals.clear();
+
     for (int i = 0; i <= num_variables; ++i) {
         int goal_val = new_goal_values[i];
         ExplicitVariable var = variables[i];
-        if (var.axiom_layer == -1) {
-            // For regular variables, adding effect to the goal-achieving action and goal value
+        if (var.axiom_layer >= 0) {
+            // Derived variables are not added to the effects; they are computed by axioms
+            // The goal value of the derived variable cannot be specified, since the values of the regular variables are changed, and therefore the derived values would be different.
+        } else {
             operators[operators.size() - 1].effects.push_back(ExplicitEffect(i, goal_val, vector<FactPair>()));
             goals.push_back(FactPair(i, goal_val));
         }
