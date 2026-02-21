@@ -14,7 +14,7 @@ from common_setup import IssueConfig, IssueExperiment
 DIR = os.path.dirname(os.path.abspath(__file__))
 SCRIPT_NAME = os.path.splitext(os.path.basename(__file__))[0]
 BENCHMARKS_DIR = os.environ["DOWNWARD_BENCHMARKS"]
-BENCHMARKS_DIR = '/data/software/fd-symbolic-axioms/benchmarks'
+BENCHMARKS_DIR = '/root/software/fd-symbolic-axioms/benchmarks'
 REVISIONS = ["axioms"]
 BUILDS = ["release"]
 
