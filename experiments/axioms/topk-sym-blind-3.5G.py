@@ -39,8 +39,7 @@ SUITE = common_setup.DEFAULT_OPTIMAL_SUITE
 
 # SUITE = ['grid', 'gripper', 'blocks']
 
-SUITE = ['blocks-axioms', 'grid-axioms', 'miconic-axioms', 'optical-telegraphs', 'psr-middle', 'psr-large', 'philosophers', 'assembly', 'airport-adl', 'trucks',  'blocker', 'social-planning', 'sokoban-axioms', 'acc-cc2', 'grid-cc2', 'collab-and-comm', 'muddy-children', 'muddy-child', 'sum', 'word-rooms']
-
+SUITE = ["airport-adl", "assembly", "blocker", "blocks-axioms", "collab-and-comm", "ghosh-etal-JAR-acc-cc1", "ghosh-etal-JAR-acc-cc2", "ghosh-etal-JAR-grid-cc2", "grid-axioms", "miconic-axioms", "mincut", "muddy-child", "muddy-children", "optical-telegraphs", "philosophers", "psr-large", "psr-middle", "social-planning", "sokoban-axioms",  "spanning-tree", "sum", "trucks", "word-rooms"]
 
 ENVIRONMENT = LocalEnvironment(processes=48)
 
