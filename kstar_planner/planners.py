@@ -8,8 +8,24 @@ from pathlib import Path
 from typing import Optional
 
 import kstar_planner
+from kstar_planner.driver import limits, returncodes
+
 build_dir = Path(kstar_planner.__file__).parent / 'builds' / 'release' / 'bin'
 default_build_args = ["--build", str(build_dir.absolute())]
+
+_TIMEOUT_EXIT_CODES = {
+    returncodes.SEARCH_PLAN_FOUND_AND_OUT_OF_TIME,
+    returncodes.SEARCH_PLAN_FOUND_AND_OUT_OF_MEMORY_AND_TIME,
+    returncodes.TRANSLATE_OUT_OF_TIME,
+    returncodes.SEARCH_OUT_OF_TIME,
+    returncodes.SEARCH_OUT_OF_MEMORY_AND_TIME,
+}
+
+
+def _overall_time_limit_args(timeout: Optional[int]):
+    if timeout and limits.can_set_time_limit():
+        return ["--overall-time-limit", f"{timeout}s"]
+    return []
 
 def run_planner(planner_args) -> dict:
     data = dict()
@@ -31,7 +47,10 @@ def run_planner(planner_args) -> dict:
             data["planner_output"] = out.stdout.decode()
             data["planner_error"] = out.stderr.decode()
             
-            data["timeout_triggered"] = "search::time limit" in data["planner_output"]
+            data["timeout_triggered"] = (
+                out.returncode in _TIMEOUT_EXIT_CODES
+                or "search::time limit" in data["planner_output"]
+            )
             data["plans"] = []
 
             plans_file = Path(result_file_path)
@@ -68,8 +87,8 @@ def plan_unordered_topq(domain_file : Path, problem_file : Path, quality_bound :
 
     heuristic = search_heuristic if search_heuristic else "lmcut(transform=undo_to_origin())"
 
-    planner_args = [str(domain_file.absolute()), str(problem_file.absolute()), 
-                    "--symmetries",  "sym=structural_symmetries(time_bound=0,search_symmetries=oss,stabilize_initial_state=false,keep_operator_symmetries=true)", 
+    planner_args = _overall_time_limit_args(timeout) + [str(domain_file.absolute()), str(problem_file.absolute()),
+                    "--symmetries",  "sym=structural_symmetries(time_bound=0,search_symmetries=oss,stabilize_initial_state=false,keep_operator_symmetries=true)",
                     "--search",  f"kstar({heuristic}, {stopping}, find_unordered_plans=true, dump_plan_files=false, json_file_to_dump=PLANS_JSON_NAME, symmetries=sym, pruning=limited_pruning(pruning=atom_centric_stubborn_sets(use_sibling_shortcut=true, atom_selection_strategy=quick_skip)))"]
     
     return run_planner(planner_args)
@@ -85,8 +104,8 @@ def plan_topq(domain_file : Path, problem_file : Path, quality_bound : float, nu
 
     heuristic = search_heuristic if search_heuristic else "lmcut(transform=undo_to_origin())"
 
-    planner_args = [str(domain_file.absolute()), str(problem_file.absolute()), 
-                    "--symmetries",  "sym=structural_symmetries(time_bound=0,search_symmetries=oss,stabilize_initial_state=false,keep_operator_symmetries=true)", 
+    planner_args = _overall_time_limit_args(timeout) + [str(domain_file.absolute()), str(problem_file.absolute()),
+                    "--symmetries",  "sym=structural_symmetries(time_bound=0,search_symmetries=oss,stabilize_initial_state=false,keep_operator_symmetries=true)",
                     "--search",  f"kstar({heuristic}, {stopping}, find_unordered_plans=false, dump_plan_files=false, json_file_to_dump=PLANS_JSON_NAME, symmetries=sym)"]
     
     return run_planner(planner_args)
@@ -101,11 +120,9 @@ def plan_topk(domain_file : Path, problem_file : Path, number_of_plans_bound : i
 
     heuristic = search_heuristic if search_heuristic else "lmcut(transform=undo_to_origin())"
 
-    planner_args = [str(domain_file.absolute()), str(problem_file.absolute()), 
-                    "--symmetries",  "sym=structural_symmetries(time_bound=0,search_symmetries=oss,stabilize_initial_state=false,keep_operator_symmetries=true)", 
+    planner_args = _overall_time_limit_args(timeout) + [str(domain_file.absolute()), str(problem_file.absolute()),
+                    "--symmetries",  "sym=structural_symmetries(time_bound=0,search_symmetries=oss,stabilize_initial_state=false,keep_operator_symmetries=true)",
                     "--search",  f"kstar({heuristic}, {stopping}, find_unordered_plans=false, dump_plan_files=false, json_file_to_dump=PLANS_JSON_NAME, symmetries=sym)"]
     
     return run_planner(planner_args)
     
-
-
