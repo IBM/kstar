@@ -17,8 +17,8 @@ import markup
 sleep_time = 10
 
 BOT_USERNAME = "XmlRpcBot"
-ENV_VAR_PASSWORD = "DOWNWARD_AUTODOC_PASSWORD"
-PASSWORD = os.environ.get(ENV_VAR_PASSWORD)
+ENV_VAR_NAME = "DOWNWARD_AUTODOC_PASSWORD"
+PASSWORD = os.environ.get(ENV_VAR_NAME)
 WIKI_URL = "https://www.fast-downward.org"
 DOC_PREFIX = "Doc/"
 
@@ -164,7 +164,7 @@ def get_changed_pages(old_doc_pages, new_doc_pages, all_titles):
 if __name__ == '__main__':
     args = parse_args()
     if not args.dry_run and PASSWORD is None:
-        logging.critical(f"{ENV_VAR_PASSWORD} not set.")
+        logging.critical(f"{ENV_VAR_NAME} not set.")
         sys.exit(1)
     logging.info("building planner...")
     build_planner(args.build)
